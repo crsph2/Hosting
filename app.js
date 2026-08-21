@@ -25,7 +25,7 @@ async function iniciarJuego(playerName) {
             xp: 0,
             monedas: 0,
             nivel: 1,
-            regionActual: "bosque-inicial",
+            regionActual: "Bosque de la Suma",
             logros: [],
             historial: [],
             estadisticas: {},
