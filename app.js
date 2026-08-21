@@ -9,14 +9,34 @@ function showError(message) {
 
 async function iniciarJuego(playerName) {
     try {
-        // ESTA ES LA FORMA CORRECTA (SDK Compat)
-        // NO uses fetch aquí. El SDK se encarga de todo.
-        await db.collection("jugadores").add({
+        // 1. Autenticamos al jugador de forma anónima.
+        // Sin esto, request.auth es null y las reglas (isAuthenticated())
+        // rechazan cualquier escritura.
+        const credenciales = await firebase.auth().signInAnonymously();
+        const uid = credenciales.user.uid;
+
+        // 2. Escribimos en "usuarios/{uid}", que es la colección
+        // que tus reglas realmente protegen. La regla de "create" exige
+        // request.auth.uid == userId, por eso usamos .doc(uid).set()
+        // en vez de .add() con un ID aleatorio.
+        await db.collection("usuarios").doc(uid).set({
             nombre: playerName,
-            fechaCreacion: new Date()
+            fechaCreacion: new Date(),
+            xp: 0,
+            monedas: 0,
+            nivel: 1,
+            regionActual: "bosque-inicial",
+            logros: [],
+            historial: [],
+            estadisticas: {},
+            progresoRegiones: {},
+            dificultadActual: "facil"
         });
-        
-        window.location.href = 'juego.html'; 
+
+        sessionStorage.setItem('mathquest_uid', uid);
+        sessionStorage.setItem('mathquest_nombre', playerName);
+
+        window.location.href = 'juego.html';
 
     } catch (error) {
         console.error("Error completo de Firebase:", error);
@@ -25,7 +45,7 @@ async function iniciarJuego(playerName) {
 }
 
 form.addEventListener('submit', (e) => {
-  e.preventDefault(); 
+  e.preventDefault();
   const playerName = input.value.trim();
   if (playerName.length < 3) {
     showError("Tu nombre debe tener al menos 3 caracteres, héroe.");
