@@ -1,29 +1,39 @@
-// 1. Capturamos los elementos del HTML
+// Elementos del DOM
 const form = document.getElementById('player-form');
 const input = document.getElementById('adventurer-name');
 const errorDiv = document.getElementById('error-message');
 
-// 2. La función para mostrar errores (esta es la que faltaba)
+// Función para mostrar errores
 function showError(message) {
     errorDiv.textContent = message;
-    errorDiv.classList.remove('hidden'); // Quita la clase que lo oculta
+    errorDiv.classList.remove('hidden'); // Hace visible el error
 }
 
-// 3. La función para iniciar el juego (esta es la que faltaba)
-// Aquí es donde iría tu lógica de Firebase
-function iniciarJuego(playerName) {
-    console.log("¡Bienvenido, " + playerName + "! Vamos a empezar.");
-    
-    // 👇 AQUÍ ES DONDE VA TU CÓDIGO DE FIREBASE (el fetch o el addDoc)
-    // Ejemplo básico:
-    // const db = getFirestore();
-    // addDoc(collection(db, 'jugadores'), { nombre: playerName });
-    // 👆 Si haces esto, ahí es donde te sale el error de CORS.
+// Función asíncrona para iniciar la partida (usando Firebase SDK)
+async function iniciarJuego(playerName) {
+    try {
+        // Usamos addDoc (SDK) en lugar de fetch (API REST).
+        // Esto elimina el error de CORS en el navegador.
+        await addDoc(collection(db, 'jugadores'), {
+            nombre: playerName,
+            fechaCreacion: new Date()
+        });
+
+        console.log(`¡Bienvenido, ${playerName}! Los datos se guardaron correctamente.`);
+        
+        // AQUÍ IRÍA TU REDIRECCIÓN AL JUEGO
+        // Por ejemplo: window.location.href = 'juego.html';
+
+    } catch (error) {
+        console.error("Error completo de Firebase:", error);
+        showError("No se pudo conectar con los servidores. Revisa tus permisos o tu conexión a internet.");
+    }
 }
 
-// 4. El código que te dio Gemini
+// Evento del formulario (Código de Gemini integrado)
 form.addEventListener('submit', (e) => {
   e.preventDefault(); // Evita que la página se recargue
+  
   const playerName = input.value.trim();
 
   if (playerName.length < 3) {
@@ -31,6 +41,9 @@ form.addEventListener('submit', (e) => {
     return;
   }
 
-  // Llamamos a la función de arriba
+  // Limpiamos el error anterior si lo hubiera
+  errorDiv.classList.add('hidden');
+
+  // Llamamos a la lógica de Firebase
   iniciarJuego(playerName);
 });
