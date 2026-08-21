@@ -1,3 +1,8 @@
+// ================================================================
+//  MATHQUEST - LÓGICA COMPLETA (VERSIÓN COMPAT CORREGIDA)
+// ================================================================
+
+// ---------- CONFIGURACIÓN DE FIREBASE ----------
 const firebaseConfig = {
   apiKey: "AIzaSyDWiRZWAU9sJMat1XsYznKqC4JxIXimL4c",
   authDomain: "jmate-54676.firebaseapp.com",
@@ -8,9 +13,10 @@ const firebaseConfig = {
   measurementId: "G-1Z33844ZT8"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+// Inicializar Firebase (sintaxis Compat)
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
 // ---------- CONSTANTES ----------
 const REGIONES = [
@@ -257,7 +263,6 @@ async function verificarLogros() {
   let nuevos = [];
   if (usuarioActual.progresoRegiones?.region_1?.completada && !logrosActuales.includes('Dominio Numérico')) nuevos.push('Dominio Numérico');
   if (usuarioActual.progresoRegiones?.region_2?.completada && !logrosActuales.includes('Operador Racional')) nuevos.push('Operador Racional');
-  // ... (se pueden añadir más condiciones para los 40 logros)
   if (nuevos.length) {
     await actualizarUsuario({ logros: firebase.firestore.FieldValue.arrayUnion(...nuevos) });
     mostrarMensaje(`🏅 Logro(s) desbloqueado(s): ${nuevos.join(', ')}`, 'exito');
