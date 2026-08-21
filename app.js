@@ -6,44 +6,32 @@ const errorDiv = document.getElementById('error-message');
 // Función para mostrar errores
 function showError(message) {
     errorDiv.textContent = message;
-    errorDiv.classList.remove('hidden'); // Hace visible el error
+    errorDiv.classList.remove('hidden');
 }
 
-// Función asíncrona para iniciar la partida (usando Firebase SDK)
+// Función para iniciar la partida (Sintaxis Compat)
 async function iniciarJuego(playerName) {
     try {
-        // Usamos addDoc (SDK) en lugar de fetch (API REST).
-        // Esto elimina el error de CORS en el navegador.
-        await addDoc(collection(db, 'jugadores'), {
+        await db.collection("jugadores").add({
             nombre: playerName,
             fechaCreacion: new Date()
         });
-
         console.log(`¡Bienvenido, ${playerName}! Los datos se guardaron correctamente.`);
-        
-        // AQUÍ IRÍA TU REDIRECCIÓN AL JUEGO
-        // Por ejemplo: window.location.href = 'juego.html';
-
+        // Aquí iría tu redirección al juego
     } catch (error) {
         console.error("Error completo de Firebase:", error);
-        showError("No se pudo conectar con los servidores. Revisa tus permisos o tu conexión a internet.");
+        showError("No se pudo conectar con los servidores. Revisa tus permisos.");
     }
 }
 
-// Evento del formulario (Código de Gemini integrado)
+// Evento del formulario
 form.addEventListener('submit', (e) => {
-  e.preventDefault(); // Evita que la página se recargue
-  
+  e.preventDefault();
   const playerName = input.value.trim();
-
   if (playerName.length < 3) {
     showError("Tu nombre debe tener al menos 3 caracteres, héroe.");
     return;
   }
-
-  // Limpiamos el error anterior si lo hubiera
   errorDiv.classList.add('hidden');
-
-  // Llamamos a la lógica de Firebase
   iniciarJuego(playerName);
 });
