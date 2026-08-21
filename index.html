@@ -1,34 +1,34 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-  <title>MathQuest - Aventura Matemática</title>
-  <link rel="stylesheet" href="styles.css">
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-</head>
-<body>
-<div id="app">
-  <!-- Pantalla de nickname -->
-  <div id="pantalla-nickname" class="pantalla">
-    <div class="centrado">
-      <h1>⚔️ MathQuest</h1>
-      <p>Elige tu nombre de aventurero</p>
-      <input type="text" id="input-nickname" placeholder="Nickname único" maxlength="20">
-      <button class="boton" id="btn-guardar-nick">Comenzar aventura</button>
-      <div id="mensaje-nick" class="mensaje"></div>
-    </div>
-  </div>
+<main class="quest-container">
+  <section class="login-card">
+    <header>
+      <h1 class="game-title">⚔️ MathQuest</h1>
+      <p class="game-subtitle">Elige tu nombre de aventurero para comenzar la misión</p>
+    </header>
 
-  <!-- Pantalla principal del juego (oculta inicialmente) -->
-  <div id="pantalla-juego" class="pantalla oculta">
-    <!-- ... (el resto del HTML se mantiene igual) ... -->
-  </div>
-</div>
-<!-- Carga de la lógica al final -->
-<script src="app.js"></script>
-</body>
-</html>
+    <!-- Usar un form permite enviar con la tecla Enter -->
+    <form id="player-form" class="player-form">
+      <!-- Label oculto visualmente pero disponible para accesibilidad -->
+      <label for="adventurer-name" class="sr-only">Nombre de aventurero</label>
+      
+      <input 
+        type="text" 
+        id="adventurer-name" 
+        name="adventurer-name" 
+        class="rpg-input"
+        placeholder="Ej. Mago de los Números" 
+        required 
+        minlength="3" 
+        maxlength="15" 
+        autocomplete="off"
+        autofocus
+      />
+      
+      <button type="submit" class="rpg-button btn-primary">
+        ¡Iniciar Aventura!
+      </button>
+    </form>
+    
+    <!-- Contenedor para mostrar errores (ej. "El nombre ya existe") -->
+    <div id="error-message" class="error-feedback hidden" aria-live="polite"></div>
+  </section>
+</main>
