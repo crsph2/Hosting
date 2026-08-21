@@ -1,1 +1,47 @@
-<h1>¡El juego ha comenzado!</h1>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MathQuest - Aventura</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<main class="quest-container game-container">
+
+  <section class="hud-card">
+    <div class="hud-top">
+      <div>
+        <p class="hud-name">⚔️ <span id="player-name">Aventurero</span></p>
+        <p class="hud-region">📍 <span id="player-region">Bosque de la Suma</span></p>
+      </div>
+      <div class="hud-right">
+        <p class="hud-level">Nivel <span id="player-level">1</span></p>
+        <p class="hud-coins">🪙 <span id="player-coins">0</span></p>
+      </div>
+    </div>
+    <div class="xp-bar">
+      <div id="xp-bar-fill" class="xp-bar-fill"></div>
+    </div>
+    <p class="xp-text" id="xp-text">0 / 100 XP</p>
+  </section>
+
+  <section class="quiz-card">
+    <p class="racha-label">Racha: <span id="racha-actual">0</span> 🔥</p>
+    <h2 id="pregunta-enunciado" class="pregunta-enunciado">Cargando pregunta...</h2>
+    <div id="opciones-container" class="opciones-container"></div>
+    <div id="feedback-message" class="feedback-mensaje hidden"></div>
+  </section>
+
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="game.js"></script>
+
+</body>
+</html>
