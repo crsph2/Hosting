@@ -1,0 +1,162 @@
+/* ===== RESET Y BASE ===== */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+}
+#app {
+  width: 100%;
+  max-width: 480px;
+  background: #16213e;
+  border-radius: 32px;
+  padding: 20px 16px 30px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+  position: relative;
+  min-height: 600px;
+}
+
+/* ===== PANTALLAS ===== */
+.pantalla { display: flex; flex-direction: column; }
+.oculta { display: none !important; }
+.centrado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 16px;
+}
+.centrado h1 { font-size: 2.8rem; color: #f5c842; letter-spacing: 2px; }
+
+/* ===== TIPOGRAFÍA Y COLORES ===== */
+.titulo { font-size: 2rem; font-weight: 800; color: #f5c842; }
+.subtitulo { color: #aaa; text-align: center; margin-bottom: 20px; }
+.texto-grande { font-size: 1.2rem; }
+
+/* ===== BOTONES ===== */
+.boton {
+  background: #e94560;
+  border: none;
+  color: white;
+  font-weight: bold;
+  padding: 12px 24px;
+  border-radius: 40px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: 0.2s;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 4px 0 #b52b44;
+}
+.boton:active { transform: scale(0.96); box-shadow: 0 2px 0 #b52b44; }
+.boton.secundario { background: #1a3a5c; box-shadow: 0 4px 0 #0f2940; }
+.boton.small { width: auto; padding: 6px 14px; font-size: 0.8rem; background: #444; box-shadow: none; }
+.boton:disabled { opacity: 0.5; transform: none; box-shadow: none; cursor: not-allowed; }
+
+/* ===== INPUTS ===== */
+input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 40px;
+  border: 2px solid #2a3f5e;
+  background: #0f1a2b;
+  color: #eee;
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+input:focus { outline: 2px solid #e94560; border-color: transparent; }
+
+/* ===== MENSAJES ===== */
+.mensaje { padding: 12px; border-radius: 16px; margin: 8px 0; border-left: 4px solid #f5c842; background: #2a3f5e; }
+.mensaje.error { border-left-color: #e94560; background: #3e1a2a; }
+.mensaje.exito { border-left-color: #4caf50; background: #1a3a2a; }
+
+/* ===== BARRA SUPERIOR ===== */
+.barra-superior {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.barra-superior span { font-weight: bold; }
+
+/* ===== NAVEGACIÓN ===== */
+.nav-juego {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.nav-btn {
+  background: #2a3f5e;
+  border: none;
+  color: #eee;
+  padding: 6px 14px;
+  border-radius: 30px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: 0.2s;
+}
+.nav-btn:hover { background: #3a5a7a; }
+.nav-btn.activo { background: #e94560; }
+
+/* ===== VISTAS ===== */
+.vista { display: flex; flex-direction: column; gap: 12px; }
+.vista h2 { color: #f5c842; border-bottom: 2px solid #2a3f5e; padding-bottom: 8px; }
+
+/* ===== TARJETAS ===== */
+.card {
+  background: #1f2b48;
+  border-radius: 24px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border-left: 6px solid #e94560;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.card:hover { background: #25345a; }
+.card .icono { font-size: 1.8rem; margin-right: 8px; vertical-align: middle; }
+.badge {
+  background: #e94560;
+  padding: 2px 12px;
+  border-radius: 30px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  display: inline-block;
+}
+.badge.verde { background: #4caf50; }
+
+/* ===== PROGRESO ===== */
+.progreso-barra {
+  background: #2a3f5e;
+  height: 12px;
+  border-radius: 20px;
+  overflow: hidden;
+  margin: 6px 0;
+}
+.progreso-barra > div { height: 100%; background: #f5c842; width: 0%; }
+
+/* ===== RANKING ===== */
+.ranking-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #2a3f5e;
+}
+.ranking-pos { font-weight: bold; color: #f5c842; width: 30px; }
+
+/* ===== ACCESIBILIDAD ===== */
+*:focus-visible { outline: 3px solid #f5c842; outline-offset: 2px; }
+@media (max-width: 480px) {
+  #app { padding: 12px; border-radius: 20px; }
+  .centrado h1 { font-size: 2.2rem; }
+}
