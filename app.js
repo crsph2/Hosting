@@ -21,7 +21,7 @@ async function iniciarJuego(playerName) {
         console.log(`¡Bienvenido, ${playerName}! Los datos se guardaron correctamente.`);
         
         // AQUÍ IRÍA TU REDIRECCIÓN AL JUEGO
-        // Por ejemplo: window.location.href = 'juego.html';
+        window.location.href = 'juego.html';
 
     } catch (error) {
         console.error("Error completo de Firebase:", error);
