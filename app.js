@@ -495,7 +495,6 @@ if (btnGuardar) {
     }
   });
 }
-  
 
   // Navegación
   document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -594,3 +593,21 @@ if (btnGuardar) {
 });
 
 console.log('MathQuest cargado con tus credenciales. Esperando autenticación...');
+
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('player-form');
+  const input = document.getElementById('adventurer-name');
+  
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const playerName = input.value.trim();
+  
+    if (playerName.length < 3) {
+      showError("Tu nombre debe tener al menos 3 caracteres, héroe.");
+      return;
+    }
+  
+    // Lógica para iniciar el juego o la evaluación matemática
+    iniciarJuego(playerName);
+  });
+});
