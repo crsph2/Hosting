@@ -3,13 +3,14 @@
 // ================================================================
 
 // ---------- CONFIGURACIÓN DE FIREBASE (EXTRAÍDA DE TU SITIO) ----------
+
 const firebaseConfig = {
-  apiKey: "AIzaSyA2FgQ9mXTwa6WTw_yfH3jKHQHWqOSh-T4",
-  authDomain: "mathquest-3f89c.firebaseapp.com",
-  projectId: "mathquest-3f89c",
-  storageBucket: "mathquest-3f89c.appspot.com",
-  messagingSenderId: "778836908077",
-  appId: "1:778836908077:web:9c71271809265efe40103c"
+  apiKey: "AIzaSyDWirZWAU9sJMat1XsYznKqC4JxIXimL4c",
+  authDomain: "jmate-54676.firebaseapp.com",
+  projectId: "jmate-54676",
+  storageBucket: "jmate-54676.firebasestorage.app",
+  messagingSenderId: "23842288171",
+  appId: "1:23842288171:web:ff9175535ecccdd79176e"
 };
 
 // Inicializar Firebase (solo una vez)
