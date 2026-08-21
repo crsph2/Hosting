@@ -451,46 +451,51 @@ auth.onAuthStateChanged(async user => {
 // ---------- EVENTOS ----------
 document.addEventListener('DOMContentLoaded', () => {
   // Guardar nickname
-  const btnGuardar = document.getElementById('btn-guardar-nick');
-  if (btnGuardar) {
-    btnGuardar.addEventListener('click', async () => {
-      console.log('Click en guardar nickname');
-      const nick = document.getElementById('input-nickname').value.trim();
-      if (!nick) {
-        mostrarMensaje('Ingresa un nickname', 'error', document.getElementById('mensaje-nick'));
+const btnGuardar = document.getElementById('btn-guardar-nick');
+if (btnGuardar) {
+  btnGuardar.addEventListener('click', async () => {
+    console.log('Click en guardar nickname. uidActual:', uidActual);
+    if (!uidActual) {
+      mostrarMensaje('Esperando conexión con el servidor...', 'error', document.getElementById('mensaje-nick'));
+      return;
+    }
+    const nick = document.getElementById('input-nickname').value.trim();
+    if (!nick) {
+      mostrarMensaje('Ingresa un nickname', 'error', document.getElementById('mensaje-nick'));
+      return;
+    }
+    try {
+      const snapshot = await db.collection('usuarios').where('nickname', '==', nick).get();
+      if (!snapshot.empty) {
+        mostrarMensaje('Ese nickname ya está en uso', 'error', document.getElementById('mensaje-nick'));
         return;
       }
-      try {
-        const snapshot = await db.collection('usuarios').where('nickname', '==', nick).get();
-        if (!snapshot.empty) {
-          mostrarMensaje('Ese nickname ya está en uso', 'error', document.getElementById('mensaje-nick'));
-          return;
-        }
-        await db.collection('usuarios').doc(uidActual).set({
-          nickname: nick,
-          nivel: 1,
-          xp: 0,
-          monedas: 0,
-          regionActual: 1,
-          logros: [],
-          historial: [],
-          estadisticas: { totalPreguntas: 0, aciertos: 0, errores: 0, tiempoPromedio: 0 },
-          progresoRegiones: {},
-          dificultadActual: 3,
-          bloqueado: false,
-          rol: 'usuario',
-          fechaRegistro: new Date()
-        });
-        document.getElementById('pantalla-nickname').classList.add('oculta');
-        document.getElementById('pantalla-juego').classList.remove('oculta');
-        await cargarUsuarioActual();
-        mostrarMensaje(`¡Bienvenido, ${nick}!`, 'exito');
-      } catch (e) {
-        console.error('Error al guardar nickname:', e);
-        mostrarMensaje('Error al guardar. Intenta de nuevo.', 'error', document.getElementById('mensaje-nick'));
-      }
-    });
-  }
+      await db.collection('usuarios').doc(uidActual).set({
+        nickname: nick,
+        nivel: 1,
+        xp: 0,
+        monedas: 0,
+        regionActual: 1,
+        logros: [],
+        historial: [],
+        estadisticas: { totalPreguntas: 0, aciertos: 0, errores: 0, tiempoPromedio: 0 },
+        progresoRegiones: {},
+        dificultadActual: 3,
+        bloqueado: false,
+        rol: 'usuario',
+        fechaRegistro: new Date()
+      });
+      document.getElementById('pantalla-nickname').classList.add('oculta');
+      document.getElementById('pantalla-juego').classList.remove('oculta');
+      await cargarUsuarioActual();
+      mostrarMensaje(`¡Bienvenido, ${nick}!`, 'exito');
+    } catch (e) {
+      console.error('Error al guardar nickname:', e);
+      mostrarMensaje('Error al guardar. Intenta de nuevo.', 'error', document.getElementById('mensaje-nick'));
+    }
+  });
+}
+  
 
   // Navegación
   document.querySelectorAll('.nav-btn').forEach(btn => {
