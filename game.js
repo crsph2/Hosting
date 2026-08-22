@@ -1,5 +1,5 @@
 // ---------- Configuración de niveles y regiones ----------
-const XP_POR_NIVEL = 10; // XP necesaria para subir de nivel
+const XP_POR_NIVEL = 100;
 
 // Regiones según nivel (mínimos actualizados)
 const REGIONES = [
@@ -26,6 +26,49 @@ function obtenerDificultad(nivel) {
   if (nivel >= 5 && nivel <= 8) return 3; // Dificultad 3: binomios y trinomios simples
   if (nivel >= 9 && nivel <= 12) return 4; // Dificultad 4: trinomios con coeficiente >1
   return 5; // Dificultad 5: diferencia de cubos (nivel 13+)
+}
+
+// ---------- Normalización de factorizaciones ----------
+// Ordena los factores de un producto de binomios para comparar equivalentes
+function normalizarFactorizacion(exp) {
+  exp = exp.replace(/\s/g, ''); // eliminar espacios
+
+  // Patrón para (ax+b)(cx+d) con a,c opcionales (si no se escribe, es 1)
+  let match = exp.match(/^\(([+-]?\d*)x([+-]\d+)\)\(([+-]?\d*)x([+-]\d+)\)$/);
+  if (match) {
+    let a = match[1] === '' ? 1 : (match[1] === '-' ? -1 : parseInt(match[1]));
+    let b = parseInt(match[2]);
+    let c = match[3] === '' ? 1 : (match[3] === '-' ? -1 : parseInt(match[3]));
+    let d = parseInt(match[4]);
+
+    let factores = [
+      { a, b },
+      { a: c, b: d }
+    ];
+
+    // Ordenar factores: primero por coeficiente de x, luego por término independiente
+    factores.sort((f1, f2) => {
+      if (f1.a !== f2.a) return f1.a - f2.a;
+      return f1.b - f2.b;
+    });
+
+    // Función para formatear un factor (ax+b)
+    function fmt(f) {
+      let parteX = '';
+      if (f.a === 1) parteX = 'x';
+      else if (f.a === -1) parteX = '-x';
+      else parteX = f.a + 'x';
+      let parteConst = '';
+      if (f.b > 0) parteConst = '+' + f.b;
+      else if (f.b < 0) parteConst = f.b.toString();
+      return '(' + parteX + parteConst + ')';
+    }
+
+    return fmt(factores[0]) + fmt(factores[1]);
+  }
+
+  // Para otros casos (factor común, cubos, etc.) no normalizamos
+  return exp;
 }
 
 // ---------- Generación de preguntas ----------
@@ -95,7 +138,6 @@ function generarPregunta(dificultad) {
       const tipoCubo = Math.random() < 0.5 ? 'diferencia' : 'suma';
       const a5 = numeroAleatorio(2, 4);
       const b5 = numeroAleatorio(2, 4);
-      const aCubo = a5 * a5 * a5;
       const bCubo = b5 * b5 * b5;
       let expresion5, factorizacion5;
       if (tipoCubo === 'diferencia') {
@@ -111,9 +153,18 @@ function generarPregunta(dificultad) {
       break;
   }
 
+  // Calcular la versión normalizada de la respuesta correcta
+  const respuestaNormalizada = normalizarFactorizacion(respuestaCorrecta);
+
   // Mezclar opciones (incluye la correcta)
   opciones = mezclarArray([respuestaCorrecta, ...opciones]);
-  return { enunciado, respuestaCorrecta, opciones };
+
+  return {
+    enunciado,
+    respuestaCorrecta,          // cadena original (para mostrar)
+    respuestaNormalizada,       // cadena normalizada (para comparar)
+    opciones
+  };
 }
 
 // Genera opciones incorrectas (errores comunes) para cada tipo
@@ -125,7 +176,6 @@ function generarOpcionesFactorizacion(correcta, cantidad, nivel) {
     let candidata = '';
 
     if (nivel === 'facil') {
-      // Para factor común: cambiar signos o coeficientes
       const match = correcta.match(/(\d+)\(x ([+-]) (\d+)\)/);
       if (match) {
         const a = parseInt(match[1]);
@@ -138,17 +188,8 @@ function generarOpcionesFactorizacion(correcta, cantidad, nivel) {
           `${a}(x ${signo === '+' ? '-' : '+'} ${b+1})`
         ];
         candidata = variantes[numeroAleatorio(0, variantes.length-1)];
-      } else {
-        // Fallback: cambiar números
-        const nums = correcta.match(/\d+/g);
-        if (nums) {
-          const a = parseInt(nums[0]);
-          const b = parseInt(nums[1] || '1');
-          candidata = `${a+1}(x + ${b})`;
-        }
       }
     } else if (nivel === 'normal') {
-      // Para binomios: cambiar signos o factores
       const match = correcta.match(/\(x \+ (\d+)\)\(x - (\d+)\)/);
       if (match) {
         const a = parseInt(match[1]);
@@ -175,7 +216,6 @@ function generarOpcionesFactorizacion(correcta, cantidad, nivel) {
         }
       }
     } else if (nivel === 'dificil') {
-      // Para trinomios con coeficiente >1
       const match = correcta.match(/\((\d+)x \+ (\d+)\)\((\d+)x \+ (\d+)\)/);
       if (match) {
         const p = parseInt(match[1]), q = parseInt(match[2]);
@@ -189,7 +229,6 @@ function generarOpcionesFactorizacion(correcta, cantidad, nivel) {
         candidata = variantes[numeroAleatorio(0, variantes.length-1)];
       }
     } else if (nivel === 'cubos') {
-      // Para cubos: cambiar signos o coeficientes
       const match = correcta.match(/\(x ([+-]) (\d+)\)\(x² ([+-]) (\d+)x \+ (\d+)\)/);
       if (match) {
         const signo1 = match[1];
@@ -289,13 +328,15 @@ function nuevaPregunta() {
 async function responder(opcionElegida, btnElegido) {
   [...elOpciones.children].forEach(b => b.disabled = true);
 
-  const esCorrecta = opcionElegida === preguntaActual.respuestaCorrecta;
+  // Normalizar la respuesta del usuario y comparar con la normalizada correcta
+  const esCorrecta = normalizarFactorizacion(opcionElegida) === preguntaActual.respuestaNormalizada;
+
   let xpGanada = 0;
   let monedasGanadas = 0;
 
   if (esCorrecta) {
     racha++;
-    xpGanada = 10 + Math.min(racha, 5) * 2; // base + bono por racha
+    xpGanada = 10 + Math.min(racha, 5) * 2;
     monedasGanadas = 5;
     btnElegido.classList.add('opcion-correcta');
     elFeedback.textContent = '¡Correcto, héroe! Sigue así.';
