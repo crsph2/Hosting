@@ -1,19 +1,28 @@
 // ---------- Configuración de niveles y regiones ----------
 const XP_POR_NIVEL = 100;
+
+// Las regiones ahora reflejan el contenido matemático de cada rango de niveles
 const REGIONES = [
-  { minNivel: 1, nombre: "Aldea del Factor Común" },
-  { minNivel: 3, nombre: "Bosque de la Diferencia de Cuadrados" },
-  { minNivel: 5, nombre: "Montaña del Trinomio Cuadrado" },
-  { minNivel: 8, nombre: "Cueva de la Factorización Compleja" },
-  { minNivel: 12, nombre: "Ciudadela de los Polinomios" }
+  { minNivel: 1, nombre: "Aldea del Factor Común" },          // Niveles 1-4 (fácil)
+  { minNivel: 5, nombre: "Bosque de Productos Notables" },    // Niveles 5-7 (normal)
+  { minNivel: 8, nombre: "Montaña de Trinomios Avanzados" }, // Niveles 8-11 (difícil)
+  { minNivel: 12, nombre: "Ciudadela de la Factorización Maestra" } // Niveles 12+
 ];
 
+// Calcula la región según el nivel
 function regionParaNivel(nivel) {
   let region = REGIONES[0].nombre;
   for (const r of REGIONES) {
     if (nivel >= r.minNivel) region = r.nombre;
   }
   return region;
+}
+
+// Calcula la dificultad a partir del nivel
+function obtenerDificultad(nivel) {
+  if (nivel <= 4) return 'facil';
+  if (nivel <= 7) return 'normal';
+  return 'dificil';
 }
 
 // ---------- Generación de preguntas ----------
@@ -30,12 +39,10 @@ function generarPregunta(dificultad) {
         const a = numeroAleatorio(2, 6);
         const b = numeroAleatorio(2, 9);
         const termino1 = a * b;
-        // Expresión: a*x + termino1
         const expresion = `${a}x + ${termino1}`;
         const factorizacion = `${a}(x + ${b})`;
         enunciado = `Factoriza: ${expresion}`;
         respuestaCorrecta = factorizacion;
-        // Generamos opciones incorrectas
         opciones = generarOpcionesFactorizacion(respuestaCorrecta, 3, 'facil');
     } else if (dificultad === 'normal') {
         // 50% diferencia de cuadrados, 50% trinomio simple (coeficiente líder = 1)
@@ -48,7 +55,7 @@ function generarPregunta(dificultad) {
             respuestaCorrecta = factorizacion;
             opciones = generarOpcionesFactorizacion(respuestaCorrecta, 3, 'normal');
         } else {
-            // Trinomio simple: x² + bx + c = (x + m)(x + n) con m*n = c y m+n = b
+            // Trinomio simple: x² + bx + c = (x + m)(x + n)
             const m = numeroAleatorio(2, 5);
             const n = numeroAleatorio(2, 5);
             const b = m + n;
@@ -61,7 +68,6 @@ function generarPregunta(dificultad) {
         }
     } else { // dificil
         // Trinomio con coeficiente líder > 1: ax² + bx + c = (px + q)(rx + s)
-        // Generamos p, q, r, s de modo que a = p*r, b = p*s + q*r, c = q*s
         const p = numeroAleatorio(2, 3);
         const r = numeroAleatorio(2, 3);
         const q = numeroAleatorio(1, 4);
@@ -94,7 +100,6 @@ function generarOpcionesFactorizacion(correcta, cantidad, nivel) {
         intentos++;
         let candidata = '';
         if (nivel === 'facil') {
-            // Errores: cambiar signos, cambiar el factor común
             const match = correcta.match(/(\d+)\(x \+ (\d+)\)/);
             if (match) {
                 const a = parseInt(match[1]);
@@ -108,7 +113,6 @@ function generarOpcionesFactorizacion(correcta, cantidad, nivel) {
                 candidata = variantes[numeroAleatorio(0, variantes.length-1)];
             }
         } else if (nivel === 'normal') {
-            // Errores: signos cambiados, factores intercambiados, etc.
             const match = correcta.match(/\(x \+ (\d+)\)\(x - (\d+)\)/);
             if (match) {
                 const a = parseInt(match[1]);
@@ -135,7 +139,6 @@ function generarOpcionesFactorizacion(correcta, cantidad, nivel) {
                 }
             }
         } else { // dificil
-            // Errores: cambiar coeficientes, signos, etc.
             const match = correcta.match(/\((\d+)x \+ (\d+)\)\((\d+)x \+ (\d+)\)/);
             if (match) {
                 const p = parseInt(match[1]), q = parseInt(match[2]);
@@ -184,7 +187,6 @@ const elRacha = document.getElementById('racha-actual');
 
 firebase.auth().onAuthStateChanged(async (user) => {
   if (!user) {
-    // No hay sesión: de vuelta al login
     window.location.href = 'index.html';
     return;
   }
@@ -215,7 +217,9 @@ function actualizarUI() {
 
 function nuevaPregunta() {
   elFeedback.classList.add('hidden');
-  preguntaActual = generarPregunta(jugador.dificultadActual || 'facil');
+  // Calculamos la dificultad a partir del nivel actual del jugador
+  const dificultad = obtenerDificultad(jugador.nivel);
+  preguntaActual = generarPregunta(dificultad);
   elPregunta.textContent = preguntaActual.enunciado + ' = ?';
   elOpciones.innerHTML = '';
 
@@ -237,7 +241,7 @@ async function responder(opcionElegida, btnElegido) {
 
   if (esCorrecta) {
     racha++;
-    xpGanada = 10 + Math.min(racha, 5) * 2; // bono por racha, tope seguro bajo el límite de la regla
+    xpGanada = 10 + Math.min(racha, 5) * 2;
     monedasGanadas = 5;
     btnElegido.classList.add('opcion-correcta');
     elFeedback.textContent = '¡Correcto, héroe! Sigue así.';
