@@ -1,12 +1,13 @@
 // ---------- Configuración de niveles y regiones ----------
-const XP_POR_NIVEL = 100;
+const XP_POR_NIVEL = 100; // XP necesaria para subir de nivel
 
-// Nombres de regiones (puedes cambiarlos libremente)
+// Regiones según nivel (mínimos actualizados)
 const REGIONES = [
   { minNivel: 1, nombre: "Aldea del Factor Común" },
-  { minNivel: 5, nombre: "Montaña del Trinomio Cuadrado" },
-  { minNivel: 8, nombre: "Cueva de la Factorización Compleja" },
-  { minNivel: 12, nombre: "Ciudadela de los Polinomios" }
+  { minNivel: 2, nombre: "Ciudad del Factor Común" },
+  { minNivel: 5, nombre: "Montaña del Binomio Cuadrado" },
+  { minNivel: 9, nombre: "Cueva de la Factorización Compleja" },
+  { minNivel: 13, nombre: "Ciudadela de los Polinomios" }
 ];
 
 // Calcula la región según el nivel
@@ -18,12 +19,13 @@ function regionParaNivel(nivel) {
   return region;
 }
 
-// Calcula la dificultad a partir del nivel
-// Nivel 1-4 → fácil, 5-7 → normal, 8+ → difícil
+// Calcula la dificultad (1 a 5) a partir del nivel
 function obtenerDificultad(nivel) {
-  if (nivel <= 4) return 'facil';
-  if (nivel <= 7) return 'normal';
-  return 'dificil';
+  if (nivel === 1) return 1;           // Dificultad 1: factor común positivo
+  if (nivel >= 2 && nivel <= 4) return 2; // Dificultad 2: factor común con suma/resta
+  if (nivel >= 5 && nivel <= 8) return 3; // Dificultad 3: binomios y trinomios simples
+  if (nivel >= 9 && nivel <= 12) return 4; // Dificultad 4: trinomios con coeficiente >1
+  return 5; // Dificultad 5: diferencia de cubos (nivel 13+)
 }
 
 // ---------- Generación de preguntas ----------
@@ -31,136 +33,193 @@ function numeroAleatorio(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+// Genera una pregunta según la dificultad (1 a 5)
 function generarPregunta(dificultad) {
-    let enunciado, respuestaCorrecta, opciones = [];
+  let enunciado, respuestaCorrecta, opciones = [];
 
-    if (dificultad === 'facil') {
-        // Factor común monomio: ax + ab = a(x + b)
-        const a = numeroAleatorio(2, 6);
-        const b = numeroAleatorio(2, 9);
-        const termino1 = a * b;
-        const expresion = `${a}x + ${termino1}`;
-        const factorizacion = `${a}(x + ${b})`;
-        enunciado = `Factoriza: ${expresion}`;
-        respuestaCorrecta = factorizacion;
-        opciones = generarOpcionesFactorizacion(respuestaCorrecta, 3, 'facil');
-    } else if (dificultad === 'normal') {
-        // 50% diferencia de cuadrados, 50% trinomio simple (coeficiente líder = 1)
-        if (Math.random() < 0.5) {
-            const a = numeroAleatorio(2, 7);
-            const expresion = `x² - ${a*a}`;
-            const factorizacion = `(x + ${a})(x - ${a})`;
-            enunciado = `Factoriza: ${expresion}`;
-            respuestaCorrecta = factorizacion;
-            opciones = generarOpcionesFactorizacion(respuestaCorrecta, 3, 'normal');
-        } else {
-            const m = numeroAleatorio(2, 5);
-            const n = numeroAleatorio(2, 5);
-            const b = m + n;
-            const c = m * n;
-            const expresion = `x² + ${b}x + ${c}`;
-            const factorizacion = `(x + ${m})(x + ${n})`;
-            enunciado = `Factoriza: ${expresion}`;
-            respuestaCorrecta = factorizacion;
-            opciones = generarOpcionesFactorizacion(respuestaCorrecta, 3, 'normal');
-        }
-    } else { // dificil
-        // Trinomio con coeficiente líder > 1: ax² + bx + c = (px + q)(rx + s)
-        const p = numeroAleatorio(2, 3);
-        const r = numeroAleatorio(2, 3);
-        const q = numeroAleatorio(1, 4);
-        const s = numeroAleatorio(1, 4);
-        const a = p * r;
-        const b = p * s + q * r;
-        const c = q * s;
-        const expresion = `${a}x² + ${b}x + ${c}`;
-        const factorizacion = `(${p}x + ${q})(${r}x + ${s})`;
-        enunciado = `Factoriza: ${expresion}`;
-        respuestaCorrecta = factorizacion;
-        opciones = generarOpcionesFactorizacion(respuestaCorrecta, 3, 'dificil');
-    }
+  switch(dificultad) {
+    case 1: // Factor común positivo (nivel 1)
+      const a1 = numeroAleatorio(2, 6);
+      const b1 = numeroAleatorio(2, 9);
+      const termino1 = a1 * b1;
+      enunciado = `Factoriza: ${a1}x + ${termino1}`;
+      respuestaCorrecta = `${a1}(x + ${b1})`;
+      opciones = generarOpcionesFactorizacion(respuestaCorrecta, 3, 'facil');
+      break;
 
-    opciones = mezclarArray([respuestaCorrecta, ...opciones]);
-    return {
-        enunciado: enunciado,
-        respuestaCorrecta: respuestaCorrecta,
-        opciones: opciones
-    };
+    case 2: // Factor común con suma o resta (niveles 2-4)
+      const a2 = numeroAleatorio(2, 6);
+      const b2 = numeroAleatorio(2, 9);
+      const signo = Math.random() < 0.5 ? '+' : '-';
+      const termino2 = signo === '+' ? a2 * b2 : -a2 * b2;
+      const expresion2 = `${a2}x ${signo} ${Math.abs(termino2)}`;
+      const factorizacion2 = `${a2}(x ${signo} ${b2})`;
+      enunciado = `Factoriza: ${expresion2}`;
+      respuestaCorrecta = factorizacion2;
+      opciones = generarOpcionesFactorizacion(respuestaCorrecta, 3, 'facil');
+      break;
+
+    case 3: // 50% diferencia de cuadrados, 50% trinomio simple (niveles 5-8)
+      if (Math.random() < 0.5) {
+        // Diferencia de cuadrados: x² - a² = (x+a)(x-a)
+        const a3 = numeroAleatorio(2, 7);
+        enunciado = `Factoriza: x² - ${a3*a3}`;
+        respuestaCorrecta = `(x + ${a3})(x - ${a3})`;
+        opciones = generarOpcionesFactorizacion(respuestaCorrecta, 3, 'normal');
+      } else {
+        // Trinomio simple: x² + bx + c = (x+m)(x+n)
+        const m = numeroAleatorio(2, 5);
+        const n = numeroAleatorio(2, 5);
+        const b = m + n;
+        const c = m * n;
+        enunciado = `Factoriza: x² + ${b}x + ${c}`;
+        respuestaCorrecta = `(x + ${m})(x + ${n})`;
+        opciones = generarOpcionesFactorizacion(respuestaCorrecta, 3, 'normal');
+      }
+      break;
+
+    case 4: // Trinomio con coeficiente líder > 1 (niveles 9-12)
+      const p = numeroAleatorio(2, 3);
+      const r = numeroAleatorio(2, 3);
+      const q = numeroAleatorio(1, 4);
+      const s = numeroAleatorio(1, 4);
+      const a4 = p * r;
+      const b4 = p * s + q * r;
+      const c4 = q * s;
+      enunciado = `Factoriza: ${a4}x² + ${b4}x + ${c4}`;
+      respuestaCorrecta = `(${p}x + ${q})(${r}x + ${s})`;
+      opciones = generarOpcionesFactorizacion(respuestaCorrecta, 3, 'dificil');
+      break;
+
+    case 5: // Diferencia o suma de cubos (nivel 13+)
+      const tipoCubo = Math.random() < 0.5 ? 'diferencia' : 'suma';
+      const a5 = numeroAleatorio(2, 4);
+      const b5 = numeroAleatorio(2, 4);
+      const aCubo = a5 * a5 * a5;
+      const bCubo = b5 * b5 * b5;
+      let expresion5, factorizacion5;
+      if (tipoCubo === 'diferencia') {
+        expresion5 = `x³ - ${bCubo}`;
+        factorizacion5 = `(x - ${b5})(x² + ${b5}x + ${b5*b5})`;
+      } else {
+        expresion5 = `x³ + ${bCubo}`;
+        factorizacion5 = `(x + ${b5})(x² - ${b5}x + ${b5*b5})`;
+      }
+      enunciado = `Factoriza: ${expresion5}`;
+      respuestaCorrecta = factorizacion5;
+      opciones = generarOpcionesFactorizacion(respuestaCorrecta, 3, 'cubos');
+      break;
+  }
+
+  // Mezclar opciones (incluye la correcta)
+  opciones = mezclarArray([respuestaCorrecta, ...opciones]);
+  return { enunciado, respuestaCorrecta, opciones };
 }
 
-// Genera opciones incorrectas (errores comunes)
+// Genera opciones incorrectas (errores comunes) para cada tipo
 function generarOpcionesFactorizacion(correcta, cantidad, nivel) {
-    const opciones = new Set();
-    let intentos = 0;
-    while (opciones.size < cantidad && intentos < 100) {
-        intentos++;
-        let candidata = '';
-        if (nivel === 'facil') {
-            const match = correcta.match(/(\d+)\(x \+ (\d+)\)/);
-            if (match) {
-                const a = parseInt(match[1]);
-                const b = parseInt(match[2]);
-                const variantes = [
-                    `${a}(x - ${b})`,
-                    `${a+1}(x + ${b})`,
-                    `${a}(x + ${b+1})`,
-                    `${a}(x - ${b+1})`
-                ];
-                candidata = variantes[numeroAleatorio(0, variantes.length-1)];
-            }
-        } else if (nivel === 'normal') {
-            const match = correcta.match(/\(x \+ (\d+)\)\(x - (\d+)\)/);
-            if (match) {
-                const a = parseInt(match[1]);
-                const b = parseInt(match[2]);
-                const variantes = [
-                    `(x - ${a})(x + ${b})`,
-                    `(x + ${a})(x + ${b})`,
-                    `(x - ${a})(x - ${b})`,
-                    `(x + ${a+1})(x - ${b})`
-                ];
-                candidata = variantes[numeroAleatorio(0, variantes.length-1)];
-            } else {
-                const match2 = correcta.match(/\(x \+ (\d+)\)\(x \+ (\d+)\)/);
-                if (match2) {
-                    const a = parseInt(match2[1]);
-                    const b = parseInt(match2[2]);
-                    const variantes = [
-                        `(x - ${a})(x + ${b})`,
-                        `(x + ${a})(x - ${b})`,
-                        `(x - ${a})(x - ${b})`,
-                        `(x + ${a+1})(x + ${b})`
-                    ];
-                    candidata = variantes[numeroAleatorio(0, variantes.length-1)];
-                }
-            }
-        } else { // dificil
-            const match = correcta.match(/\((\d+)x \+ (\d+)\)\((\d+)x \+ (\d+)\)/);
-            if (match) {
-                const p = parseInt(match[1]), q = parseInt(match[2]);
-                const r = parseInt(match[3]), s = parseInt(match[4]);
-                const variantes = [
-                    `(${p}x - ${q})(${r}x + ${s})`,
-                    `(${p}x + ${q})(${r}x - ${s})`,
-                    `(${p}x + ${q+1})(${r}x + ${s})`,
-                    `(${p+1}x + ${q})(${r}x + ${s})`
-                ];
-                candidata = variantes[numeroAleatorio(0, variantes.length-1)];
-            }
+  const opciones = new Set();
+  let intentos = 0;
+  while (opciones.size < cantidad && intentos < 100) {
+    intentos++;
+    let candidata = '';
+
+    if (nivel === 'facil') {
+      // Para factor común: cambiar signos o coeficientes
+      const match = correcta.match(/(\d+)\(x ([+-]) (\d+)\)/);
+      if (match) {
+        const a = parseInt(match[1]);
+        const signo = match[2];
+        const b = parseInt(match[3]);
+        const variantes = [
+          `${a}(x ${signo === '+' ? '-' : '+'} ${b})`,
+          `${a+1}(x ${signo} ${b})`,
+          `${a}(x ${signo} ${b+1})`,
+          `${a}(x ${signo === '+' ? '-' : '+'} ${b+1})`
+        ];
+        candidata = variantes[numeroAleatorio(0, variantes.length-1)];
+      } else {
+        // Fallback: cambiar números
+        const nums = correcta.match(/\d+/g);
+        if (nums) {
+          const a = parseInt(nums[0]);
+          const b = parseInt(nums[1] || '1');
+          candidata = `${a+1}(x + ${b})`;
         }
-        if (candidata && candidata !== correcta) {
-            opciones.add(candidata);
+      }
+    } else if (nivel === 'normal') {
+      // Para binomios: cambiar signos o factores
+      const match = correcta.match(/\(x \+ (\d+)\)\(x - (\d+)\)/);
+      if (match) {
+        const a = parseInt(match[1]);
+        const b = parseInt(match[2]);
+        const variantes = [
+          `(x - ${a})(x + ${b})`,
+          `(x + ${a})(x + ${b})`,
+          `(x - ${a})(x - ${b})`,
+          `(x + ${a+1})(x - ${b})`
+        ];
+        candidata = variantes[numeroAleatorio(0, variantes.length-1)];
+      } else {
+        const match2 = correcta.match(/\(x \+ (\d+)\)\(x \+ (\d+)\)/);
+        if (match2) {
+          const a = parseInt(match2[1]);
+          const b = parseInt(match2[2]);
+          const variantes = [
+            `(x - ${a})(x + ${b})`,
+            `(x + ${a})(x - ${b})`,
+            `(x - ${a})(x - ${b})`,
+            `(x + ${a+1})(x + ${b})`
+          ];
+          candidata = variantes[numeroAleatorio(0, variantes.length-1)];
         }
+      }
+    } else if (nivel === 'dificil') {
+      // Para trinomios con coeficiente >1
+      const match = correcta.match(/\((\d+)x \+ (\d+)\)\((\d+)x \+ (\d+)\)/);
+      if (match) {
+        const p = parseInt(match[1]), q = parseInt(match[2]);
+        const r = parseInt(match[3]), s = parseInt(match[4]);
+        const variantes = [
+          `(${p}x - ${q})(${r}x + ${s})`,
+          `(${p}x + ${q})(${r}x - ${s})`,
+          `(${p}x + ${q+1})(${r}x + ${s})`,
+          `(${p+1}x + ${q})(${r}x + ${s})`
+        ];
+        candidata = variantes[numeroAleatorio(0, variantes.length-1)];
+      }
+    } else if (nivel === 'cubos') {
+      // Para cubos: cambiar signos o coeficientes
+      const match = correcta.match(/\(x ([+-]) (\d+)\)\(x² ([+-]) (\d+)x \+ (\d+)\)/);
+      if (match) {
+        const signo1 = match[1];
+        const num1 = parseInt(match[2]);
+        const signo2 = match[3];
+        const num2 = parseInt(match[4]);
+        const num3 = parseInt(match[5]);
+        const variantes = [
+          `(x ${signo1 === '+' ? '-' : '+'} ${num1})(x² ${signo2} ${num2+1}x + ${num3})`,
+          `(x ${signo1} ${num1+1})(x² ${signo2} ${num2}x + ${num3})`,
+          `(x ${signo1 === '+' ? '-' : '+'} ${num1})(x² ${signo2 === '+' ? '-' : '+'} ${num2}x + ${num3})`
+        ];
+        candidata = variantes[numeroAleatorio(0, variantes.length-1)];
+      }
     }
-    return Array.from(opciones);
+
+    if (candidata && candidata !== correcta) {
+      opciones.add(candidata);
+    }
+  }
+  return Array.from(opciones);
 }
 
+// Mezcla un array (Fisher-Yates)
 function mezclarArray(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 // ---------- Estado del juego ----------
@@ -180,6 +239,7 @@ const elOpciones = document.getElementById('opciones-container');
 const elFeedback = document.getElementById('feedback-message');
 const elRacha = document.getElementById('racha-actual');
 
+// Autenticación con Firebase
 firebase.auth().onAuthStateChanged(async (user) => {
   if (!user) {
     window.location.href = 'index.html';
@@ -235,7 +295,7 @@ async function responder(opcionElegida, btnElegido) {
 
   if (esCorrecta) {
     racha++;
-    xpGanada = 10 + Math.min(racha, 5) * 2;
+    xpGanada = 10 + Math.min(racha, 5) * 2; // base + bono por racha
     monedasGanadas = 5;
     btnElegido.classList.add('opcion-correcta');
     elFeedback.textContent = '¡Correcto, héroe! Sigue así.';
@@ -250,6 +310,7 @@ async function responder(opcionElegida, btnElegido) {
   }
   elFeedback.classList.remove('hidden');
 
+  // Actualizar experiencia y nivel
   const nuevoXp = jugador.xp + xpGanada;
   const nuevoNivel = Math.floor(nuevoXp / XP_POR_NIVEL) + 1;
   const subioNivel = nuevoNivel > jugador.nivel;
