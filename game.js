@@ -1,12 +1,12 @@
 // ---------- Configuración de niveles y regiones ----------
 const XP_POR_NIVEL = 100;
 
-// Las regiones ahora reflejan el contenido matemático de cada rango de niveles
+// Nombres de regiones (puedes cambiarlos libremente)
 const REGIONES = [
-  { minNivel: 1, nombre: "Aldea del Factor Común" },          // Niveles 1-4 (fácil)
-  { minNivel: 5, nombre: "Bosque de Productos Notables" },    // Niveles 5-7 (normal)
-  { minNivel: 8, nombre: "Montaña de Trinomios Avanzados" }, // Niveles 8-11 (difícil)
-  { minNivel: 12, nombre: "Ciudadela de la Factorización Maestra" } // Niveles 12+
+  { minNivel: 1, nombre: "Aldea del Factor Común" },
+  { minNivel: 5, nombre: "Montaña del Trinomio Cuadrado" },
+  { minNivel: 8, nombre: "Cueva de la Factorización Compleja" },
+  { minNivel: 12, nombre: "Ciudadela de los Polinomios" }
 ];
 
 // Calcula la región según el nivel
@@ -19,6 +19,7 @@ function regionParaNivel(nivel) {
 }
 
 // Calcula la dificultad a partir del nivel
+// Nivel 1-4 → fácil, 5-7 → normal, 8+ → difícil
 function obtenerDificultad(nivel) {
   if (nivel <= 4) return 'facil';
   if (nivel <= 7) return 'normal';
@@ -33,7 +34,6 @@ function numeroAleatorio(min, max) {
 function generarPregunta(dificultad) {
     let enunciado, respuestaCorrecta, opciones = [];
 
-    // Generamos la expresión y su factorización según la dificultad
     if (dificultad === 'facil') {
         // Factor común monomio: ax + ab = a(x + b)
         const a = numeroAleatorio(2, 6);
@@ -47,7 +47,6 @@ function generarPregunta(dificultad) {
     } else if (dificultad === 'normal') {
         // 50% diferencia de cuadrados, 50% trinomio simple (coeficiente líder = 1)
         if (Math.random() < 0.5) {
-            // Diferencia de cuadrados: x² - a² = (x + a)(x - a)
             const a = numeroAleatorio(2, 7);
             const expresion = `x² - ${a*a}`;
             const factorizacion = `(x + ${a})(x - ${a})`;
@@ -55,7 +54,6 @@ function generarPregunta(dificultad) {
             respuestaCorrecta = factorizacion;
             opciones = generarOpcionesFactorizacion(respuestaCorrecta, 3, 'normal');
         } else {
-            // Trinomio simple: x² + bx + c = (x + m)(x + n)
             const m = numeroAleatorio(2, 5);
             const n = numeroAleatorio(2, 5);
             const b = m + n;
@@ -82,9 +80,7 @@ function generarPregunta(dificultad) {
         opciones = generarOpcionesFactorizacion(respuestaCorrecta, 3, 'dificil');
     }
 
-    // Mezclamos las opciones
     opciones = mezclarArray([respuestaCorrecta, ...opciones]);
-
     return {
         enunciado: enunciado,
         respuestaCorrecta: respuestaCorrecta,
@@ -92,7 +88,7 @@ function generarPregunta(dificultad) {
     };
 }
 
-// Genera N opciones incorrectas para una factorización dada
+// Genera opciones incorrectas (errores comunes)
 function generarOpcionesFactorizacion(correcta, cantidad, nivel) {
     const opciones = new Set();
     let intentos = 0;
@@ -159,7 +155,6 @@ function generarOpcionesFactorizacion(correcta, cantidad, nivel) {
     return Array.from(opciones);
 }
 
-// Mezcla un array (Fisher-Yates)
 function mezclarArray(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -217,7 +212,6 @@ function actualizarUI() {
 
 function nuevaPregunta() {
   elFeedback.classList.add('hidden');
-  // Calculamos la dificultad a partir del nivel actual del jugador
   const dificultad = obtenerDificultad(jugador.nivel);
   preguntaActual = generarPregunta(dificultad);
   elPregunta.textContent = preguntaActual.enunciado + ' = ?';
