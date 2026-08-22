@@ -1,5 +1,5 @@
 // ---------- Configuración de niveles y regiones ----------
-const XP_POR_NIVEL = 10;
+const XP_POR_NIVEL = 1000;
 
 // Nombres de regiones (puedes cambiarlos libremente)
 const REGIONES = [
