@@ -1,5 +1,5 @@
 // ---------- Configuración de niveles y regiones ----------
-const XP_POR_NIVEL = 100; // XP necesaria para subir de nivel
+const XP_POR_NIVEL = 10; // XP necesaria para subir de nivel
 
 // Regiones según nivel (mínimos actualizados)
 const REGIONES = [
