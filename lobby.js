@@ -107,7 +107,6 @@ function mostrarItemsCategoria(categoria) {
                 accionesHTML += `<button class="btn-comprar" data-id="${item.id}" data-cat="${categoria}" data-precio="${item.precio}">Comprar</button>`;
             }
         } else {
-            // Símbolos: usar carácter Unicode
             const char = SIMBOLOS_MATH[item.id] || '?';
             contenidoPreview = `<div style="font-size:2.5rem; color:var(--btn-secondary); display:flex; justify-content:center;">${char}</div>`;
             
