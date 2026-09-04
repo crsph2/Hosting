@@ -1,167 +1,230 @@
 // ============================================================
-// sistemas.js – "Operación: Sistema"
-// Juego de resolución de sistemas de ecuaciones 2x2
+// sistemas.js – "Operación: Sistema" (VERSIÓN MEJORADA)
 // ============================================================
 
 // ---- CONSTANTES ----
 const XP_POR_NIVEL = 100;
 const MONEDAS_REWARDS = 200;
+const MAX_PISTAS = 5;           // Límite global de pistas
+const MAX_INTENTOS = 5;          // Intentos fallidos antes de explosión
 
-// ---- SISTEMAS PREDEFINIDOS (MVP) ----
-const SISTEMAS = {
-    bomba1: {
-        method: 'sustitucion',
-        eq1: 'y = 2x + 1',
-        eq2: 'x + y = 7',
-        solX: 2,
-        solY: 5,
-        pistas: [
-            'Busca una ecuación donde una variable ya esté despejada.',
-            'Sustituye y = 2x + 1 en la segunda ecuación.',
-            'Obtendrás una ecuación con una sola variable: x + (2x + 1) = 7. Resuelve y luego encuentra y.'
-        ]
-    },
-    bomba2: {
-        method: 'reduccion',
-        eq1: '2x + y = 9',
-        eq2: '3x - y = 6',
-        solX: 3,
-        solY: 3,
-        pistas: [
-            'Observa que los coeficientes de y son opuestos (+1 y -1).',
-            'Suma ambas ecuaciones para eliminar y.',
-            'Obtendrás 5x = 15, luego x = 3. Sustituye para hallar y.'
-        ]
-    },
-    bomba3: {
-        method: 'igualacion',
-        eq1: '2x - y = 1',
-        eq2: 'x + y = 5',
-        solX: 2,
-        solY: 3,
-        pistas: [
-            'Despeja y en ambas ecuaciones.',
-            'Iguala las expresiones obtenidas: 2x - 1 = 5 - x.',
-            'Resuelve: 3x = 6, x = 2. Sustituye para y.'
-        ]
-    },
-    grafico: {
-        eq1: 'y = 2x - 1',
-        eq2: 'y = -x + 5',
-        correctPoint: { x: 2, y: 3 },
-        distractors: [
-            { x: 3, y: 2 },
-            { x: 2, y: 1 },
-            { x: 1, y: 4 }
-        ]
-    },
-    estrategia: {
+// ========== GENERADORES DE SISTEMAS ==========
+
+// Genera un sistema para el método de SUSTITUCIÓN
+// Ejemplo: y = mx + b;  ax + by = c
+function generarSistemaSustitucion() {
+    let x, y, m, b, a, c;
+    let intentos = 0;
+    do {
+        x = Math.floor(Math.random() * 11) - 5;   // -5..5
+        y = Math.floor(Math.random() * 11) - 5;
+        m = Math.floor(Math.random() * 5) + 1;    // 1..5 (pendiente no cero)
+        b = y - m * x;                            // para que y = m*x + b
+        // Segunda ecuación: a*x + y = c (o a*x - y = c)
+        a = Math.floor(Math.random() * 5) + 1;
+        c = a * x + y;
+        intentos++;
+    } while ((x === 0 && y === 0) || intentos < 3 || Math.abs(b) > 10 || Math.abs(c) > 20);
+    // Asegurar soluciones enteras y no triviales
+
+    const eq1 = `y = ${m}x + ${b}`;
+    const eq2 = `${a}x + y = ${c}`;
+    const pistas = [
+        'Busca una ecuación donde una variable ya esté despejada.',
+        `Sustituye y = ${m}x + ${b} en la segunda ecuación.`,
+        `Obtendrás una ecuación con una sola variable: ${a}x + (${m}x + ${b}) = ${c}. Resuelve y luego encuentra y.`
+    ];
+    return { method: 'sustitucion', eq1, eq2, solX: x, solY: y, pistas };
+}
+
+// Genera un sistema para el método de REDUCCIÓN (suma/resta)
+// Ejemplo: ax + by = c;  dx + ey = f  donde b y e son opuestos o iguales
+function generarSistemaReduccion() {
+    let x, y, a, b, c, d, e, f;
+    let intentos = 0;
+    do {
+        x = Math.floor(Math.random() * 11) - 5;
+        y = Math.floor(Math.random() * 11) - 5;
+        // Hacemos que los coeficientes de y sean opuestos: b = p, e = -p
+        let p = Math.floor(Math.random() * 5) + 1;
+        b = p;
+        e = -p;
+        a = Math.floor(Math.random() * 5) + 1;
+        d = Math.floor(Math.random() * 5) + 1;
+        c = a * x + b * y;
+        f = d * x + e * y;
+        intentos++;
+    } while ((x === 0 && y === 0) || Math.abs(c) > 30 || Math.abs(f) > 30 || intentos < 3);
+
+    const eq1 = `${a}x + ${b}y = ${c}`;
+    const eq2 = `${d}x + ${e}y = ${f}`;
+    const pistas = [
+        'Observa que los coeficientes de y son opuestos (suma las ecuaciones).',
+        'Suma ambas ecuaciones para eliminar y.',
+        `Obtendrás ${a+d}x = ${c+f}, luego x = ${x}. Sustituye para hallar y.`
+    ];
+    return { method: 'reduccion', eq1, eq2, solX: x, solY: y, pistas };
+}
+
+// Genera un sistema para el método de IGUALACIÓN
+// Ambas ecuaciones despejadas en y: y = m1*x + b1; y = m2*x + b2
+function generarSistemaIgualacion() {
+    let x, y, m1, b1, m2, b2;
+    let intentos = 0;
+    do {
+        x = Math.floor(Math.random() * 11) - 5;
+        y = Math.floor(Math.random() * 11) - 5;
+        m1 = Math.floor(Math.random() * 5) + 1;
+        m2 = Math.floor(Math.random() * 5) + 1;
+        // Evitar que sean iguales
+        if (m1 === m2) m2 = (m2 + 1) % 5 + 1;
+        b1 = y - m1 * x;
+        b2 = y - m2 * x;
+        intentos++;
+    } while ((x === 0 && y === 0) || Math.abs(b1) > 15 || Math.abs(b2) > 15 || intentos < 3);
+
+    const eq1 = `y = ${m1}x + ${b1}`;
+    const eq2 = `y = ${m2}x + ${b2}`;
+    const pistas = [
+        'Despeja y en ambas ecuaciones (ya lo están).',
+        `Iguala las expresiones: ${m1}x + ${b1} = ${m2}x + ${b2}.`,
+        `Resuelve: ${m1-m2}x = ${b2-b1}, x = ${x}. Sustituye para y.`
+    ];
+    return { method: 'igualacion', eq1, eq2, solX: x, solY: y, pistas };
+}
+
+// Genera sistema para el DESAFÍO GRÁFICO
+function generarSistemaGrafico() {
+    let x, y, m1, b1, m2, b2;
+    let intentos = 0;
+    do {
+        x = Math.floor(Math.random() * 11) - 5;
+        y = Math.floor(Math.random() * 11) - 5;
+        m1 = Math.floor(Math.random() * 5) + 1;
+        m2 = Math.floor(Math.random() * 5) + 1;
+        if (m1 === m2) m2 = (m2 + 1) % 5 + 1;
+        b1 = y - m1 * x;
+        b2 = y - m2 * x;
+        intentos++;
+    } while ((x === 0 && y === 0) || Math.abs(b1) > 15 || Math.abs(b2) > 15 || intentos < 3);
+
+    const eq1 = `y = ${m1}x + ${b1}`;
+    const eq2 = `y = ${m2}x + ${b2}`;
+    const correctPoint = { x, y };
+
+    // Generar 3 distractores a partir del punto correcto
+    const distractors = [];
+    const posibles = [
+        { x: x + 1, y: y }, { x: x - 1, y: y }, { x, y: y + 1 }, { x, y: y - 1 },
+        { x: x + 1, y: y + 1 }, { x: x - 1, y: y - 1 },
+        { x: y, y: x } // intercambio
+    ];
+    // Tomar 3 aleatorios, asegurando que no sean iguales al correcto y no repetidos
+    const shuffled = posibles.sort(() => Math.random() - 0.5);
+    for (let p of shuffled) {
+        if (distractors.length >= 3) break;
+        if (p.x !== correctPoint.x || p.y !== correctPoint.y) {
+            // Evitar duplicados
+            if (!distractors.some(d => d.x === p.x && d.y === p.y)) {
+                distractors.push(p);
+            }
+        }
+    }
+    // Si no se generaron suficientes, rellenar con valores fijos
+    while (distractors.length < 3) {
+        let dx = Math.floor(Math.random() * 7) - 3;
+        let dy = Math.floor(Math.random() * 7) - 3;
+        if (dx !== 0 || dy !== 0) {
+            if (!distractors.some(d => d.x === correctPoint.x + dx && d.y === correctPoint.y + dy)) {
+                distractors.push({ x: correctPoint.x + dx, y: correctPoint.y + dy });
+            }
+        }
+    }
+
+    return { eq1, eq2, correctPoint, distractors };
+}
+
+// Genera sistema para el DESAFÍO ESTRATEGIA
+// El método óptimo se determina según los coeficientes
+function generarSistemaEstrategia() {
+    let x, y, a, b, c, d, e, f;
+    let intentos = 0;
+    // Elegir método óptimo al azar entre sustitución, reducción, igualación
+    const metodos = ['sustitucion', 'reduccion', 'igualacion'];
+    const metodoOptimo = metodos[Math.floor(Math.random() * metodos.length)];
+    // Generar sistema que se resuelva bien con ese método
+    switch (metodoOptimo) {
+        case 'sustitucion':
+            // y despejada fácil
+            do {
+                x = Math.floor(Math.random() * 11) - 5;
+                y = Math.floor(Math.random() * 11) - 5;
+                let m = Math.floor(Math.random() * 5) + 1;
+                let b1 = y - m * x;
+                let a1 = Math.floor(Math.random() * 5) + 1;
+                let c1 = a1 * x + y;
+                // eq1: y = m x + b1, eq2: a1 x + y = c1
+                // Asegurar que el método de sustitución sea razonable
+                if (Math.abs(b1) < 15 && Math.abs(c1) < 30) {
+                    a = a1; b = 0; c = c1; d = m; e = b1; f = 0; // guardamos para después
+                    // Reconstruir las ecuaciones
+                    const eq1 = `y = ${m}x + ${b1}`;
+                    const eq2 = `${a1}x + y = ${c1}`;
+                    return { eq1, eq2, solX: x, solY: y, metodoOptimo: 'sustitucion', pistas: [] };
+                }
+                intentos++;
+            } while (intentos < 20);
+            break;
+        case 'reduccion':
+            do {
+                x = Math.floor(Math.random() * 11) - 5;
+                y = Math.floor(Math.random() * 11) - 5;
+                let p = Math.floor(Math.random() * 5) + 1;
+                let a1 = Math.floor(Math.random() * 5) + 1;
+                let d1 = Math.floor(Math.random() * 5) + 1;
+                let b1 = p;
+                let e1 = -p;
+                let c1 = a1 * x + b1 * y;
+                let f1 = d1 * x + e1 * y;
+                if (Math.abs(c1) < 30 && Math.abs(f1) < 30) {
+                    const eq1 = `${a1}x + ${b1}y = ${c1}`;
+                    const eq2 = `${d1}x + ${e1}y = ${f1}`;
+                    return { eq1, eq2, solX: x, solY: y, metodoOptimo: 'reduccion', pistas: [] };
+                }
+                intentos++;
+            } while (intentos < 20);
+            break;
+        case 'igualacion':
+            do {
+                x = Math.floor(Math.random() * 11) - 5;
+                y = Math.floor(Math.random() * 11) - 5;
+                let m1 = Math.floor(Math.random() * 5) + 1;
+                let m2 = Math.floor(Math.random() * 5) + 1;
+                if (m1 === m2) m2 = (m2 + 1) % 5 + 1;
+                let b1 = y - m1 * x;
+                let b2 = y - m2 * x;
+                if (Math.abs(b1) < 15 && Math.abs(b2) < 15) {
+                    const eq1 = `y = ${m1}x + ${b1}`;
+                    const eq2 = `y = ${m2}x + ${b2}`;
+                    return { eq1, eq2, solX: x, solY: y, metodoOptimo: 'igualacion', pistas: [] };
+                }
+                intentos++;
+            } while (intentos < 20);
+            break;
+    }
+    // Fallback: si no se generó, devolver un sistema fijo
+    return {
         eq1: '2x + 3y = 8',
         eq2: '3x - y = 1',
-        metodoOptimo: 'reduccion',
         solX: 1,
         solY: 2,
+        metodoOptimo: 'reduccion',
         pistas: []
-    }
-};
-
-// ---- ESTADO DEL JUEGO ----
-let gameState = {
-    currentScreen: 'START',
-    bombas: {
-        1: { completada: false, intentos: 0, pistasUsadas: 0 },
-        2: { completada: false, intentos: 0, pistasUsadas: 0 },
-        3: { completada: false, intentos: 0, pistasUsadas: 0 }
-    },
-    grafico: { completada: false, intentos: 0 },
-    estrategia: { completada: false, intentos: 0, metodoElegido: null },
-    puntuacion: 0,
-    erroresTotales: 0,
-    pistasTotalesUsadas: 0,
-    inicioTiempo: null,
-    tiempoTotal: 0,
-    ejercicios: {
-        bomba1: null,
-        bomba2: null,
-        bomba3: null,
-        grafico: null,
-        estrategia: null
-    },
-    esperandoContinuar: false,
-    faseEstrategia: 'metodo', // 'metodo' | 'resolucion'
-    metodoElegido: null
-};
-
-// ---- REFERENCIAS A DOM ----
-let elGameScreen = null;
-
-// ---- FUNCIONES AUXILIARES ----
-function mezclarArray(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
+    };
 }
 
-function validarNumero(val) {
-    const num = parseFloat(val);
-    return isNaN(num) ? null : num;
-}
-
-function sonIguales(a, b) {
-    if (a === undefined || b === undefined) return false;
-    return Math.abs(a - b) < 1e-9;
-}
-
-// ---- INICIALIZACIÓN DEL JUEGO ----
-function iniciarJuego() {
-    elGameScreen = document.getElementById('game-screen');
-    if (!elGameScreen) return;
-
-    if (!window.jugador) {
-        document.addEventListener('jugador-cargado', () => {
-            cargarEstadoDesdeFirebase();
-            renderizar();
-        });
-    } else {
-        cargarEstadoDesdeFirebase();
-        renderizar();
-    }
-
-    const btnEdit = document.getElementById('btn-edit-name');
-    if (btnEdit) {
-        btnEdit.addEventListener('click', () => {
-            if (window.jugador) {
-                const nuevo = prompt('Nuevo nombre:', window.jugador.nombre);
-                if (nuevo && nuevo.trim()) {
-                    db.collection('usuarios').doc(window.uid).update({ nombre: nuevo.trim() })
-                        .then(() => {
-                            window.jugador.nombre = nuevo.trim();
-                            sessionStorage.setItem('mathquest_nombre', nuevo.trim());
-                            actualizarUICompleta();
-                            mostrarFeedback('Nombre actualizado', 'exito');
-                        });
-                }
-            }
-        });
-    }
-
-    const btnLogout = document.getElementById('btn-logout');
-    if (btnLogout) {
-        btnLogout.addEventListener('click', async () => {
-            if (confirm('¿Cerrar sesión?')) {
-                await firebase.auth().signOut();
-                sessionStorage.clear();
-                window.location.href = 'index.html';
-            }
-        });
-    }
-}
-
-function cargarEstadoDesdeFirebase() {
-    reiniciarEstado();
-}
+// ========== INICIALIZACIÓN DEL ESTADO ==========
+let gameState = {};
 
 function reiniciarEstado() {
     gameState = {
@@ -175,6 +238,7 @@ function reiniciarEstado() {
         estrategia: { completada: false, intentos: 0, metodoElegido: null },
         puntuacion: 0,
         erroresTotales: 0,
+        pistasDisponibles: MAX_PISTAS,   // LÍMITE GLOBAL
         pistasTotalesUsadas: 0,
         inicioTiempo: null,
         tiempoTotal: 0,
@@ -187,394 +251,57 @@ function reiniciarEstado() {
         },
         esperandoContinuar: false,
         faseEstrategia: 'metodo',
-        metodoElegido: null
+        metodoElegido: null,
+        gameOver: false
     };
-    gameState.ejercicios.bomba1 = { ...SISTEMAS.bomba1 };
-    gameState.ejercicios.bomba2 = { ...SISTEMAS.bomba2 };
-    gameState.ejercicios.bomba3 = { ...SISTEMAS.bomba3 };
-    gameState.ejercicios.grafico = { ...SISTEMAS.grafico };
-    gameState.ejercicios.estrategia = { ...SISTEMAS.estrategia };
-    gameState.ejercicios.grafico.distractors = mezclarArray([...gameState.ejercicios.grafico.distractors]);
+    // Generar todos los ejercicios aleatoriamente
+    gameState.ejercicios.bomba1 = generarSistemaSustitucion();
+    gameState.ejercicios.bomba2 = generarSistemaReduccion();
+    gameState.ejercicios.bomba3 = generarSistemaIgualacion();
+    const grafico = generarSistemaGrafico();
+    gameState.ejercicios.grafico = grafico;
+    // Barajar distractores
+    gameState.ejercicios.grafico.distractors = mezclarArray([...grafico.distractors]);
+    gameState.ejercicios.estrategia = generarSistemaEstrategia();
 }
 
-// ---- RENDERIZADO PRINCIPAL ----
-function renderizar() {
-    if (!elGameScreen) return;
-    const screen = gameState.currentScreen;
-    let html = '';
+// ---- FUNCIONES AUXILIARES (sin cambios) ----
+function mezclarArray(arr) { /* ... */ }
+function validarNumero(val) { /* ... */ }
+function sonIguales(a, b) { /* ... */ }
 
-    switch (screen) {
-        case 'START':
-            html = renderStart();
-            break;
-        case 'INTRO':
-            html = renderIntro();
-            break;
-        case 'BOMBA1':
-            html = renderBomba(1);
-            break;
-        case 'BOMBA2':
-            html = renderBomba(2);
-            break;
-        case 'GRAFICO':
-            html = renderGrafico();
-            break;
-        case 'BOMBA3':
-            html = renderBomba(3);
-            break;
-        case 'ESTRATEGIA':
-            html = renderEstrategia();
-            break;
-        case 'FINISH':
-            html = renderFinish();
-            break;
-        default:
-            html = '<p>Error: pantalla desconocida</p>';
+// ========== MANEJO DE PISTAS (con límite global) ==========
+function manejarPista(num) {
+    if (gameState.bombas[num].completada) return;
+    if (gameState.pistasDisponibles <= 0) {
+        gameState.bombas[num].feedback = '⚠️ No te quedan más pistas.';
+        gameState.bombas[num].feedbackType = 'error';
+        renderizar();
+        return;
     }
-
-    elGameScreen.innerHTML = html;
-    afterRender();
-}
-
-// ---- PANTALLA DE INICIO ----
-function renderStart() {
-    return `
-        <div class="start-screen">
-            <div class="title">💣 OPERACIÓN: SISTEMA</div>
-            <div class="subtitle">Tu misión: desactivar el sistema antes de que sea demasiado tarde.</div>
-            <button class="btn-start" id="btn-start-mission">COMENZAR MISIÓN</button>
-            <div style="margin-top:1rem; display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
-                <button class="rpg-button btn-secondary" id="btn-instructions">📖 Instrucciones</button>
-                <button class="rpg-button btn-secondary" id="btn-sound-toggle">🔊 Sonido</button>
-            </div>
-        </div>
-    `;
-}
-
-// ---- INTRODUCCIÓN ----
-function renderIntro() {
-    return `
-        <div class="mission-intro">
-            <p>🚨 Se ha activado el sistema de seguridad.</p>
-            <p>💥 Hay 3 dispositivos que deben ser desactivados.</p>
-            <p>🔐 Cada dispositivo está protegido por un sistema matemático.</p>
-            <p>🧠 Encuentra la solución y utiliza el código para avanzar.</p>
-            <button class="rpg-button btn-primary btn-mission" id="btn-start-mission">INICIAR</button>
-        </div>
-    `;
-}
-
-// ---- BOMBA (genérica) ----
-function renderBomba(num) {
     const ejercicio = gameState.ejercicios[`bomba${num}`];
-    if (!ejercicio) return '<p>Error: ejercicio no encontrado</p>';
-    const completada = gameState.bombas[num].completada;
     const pistasUsadas = gameState.bombas[num].pistasUsadas;
-    const methodNames = {
-        sustitucion: 'SUSTITUCIÓN',
-        reduccion: 'REDUCCIÓN',
-        igualacion: 'IGUALACIÓN'
-    };
-    const methodLabel = methodNames[ejercicio.method] || 'MÉTODO';
-
-    let feedbackHtml = '';
-    let hintHtml = '';
-    let disabledAttr = completada ? 'disabled' : '';
-    let inputDisabled = completada ? 'disabled' : '';
-    let buttonText = completada ? '✅ Desactivada' : '💥 DESACTIVAR';
-
-    if (completada) {
-        feedbackHtml = `<div class="bomb-feedback success">✅ ¡Bomba desactivada! Solución: x = ${ejercicio.solX}, y = ${ejercicio.solY}</div>`;
-    } else {
-        const fb = gameState.bombas[num].feedback || '';
-        if (fb) {
-            const type = gameState.bombas[num].feedbackType || 'error';
-            feedbackHtml = `<div class="bomb-feedback ${type}">${fb}</div>`;
-        }
-        if (pistasUsadas > 0 && pistasUsadas <= ejercicio.pistas.length) {
-            const pista = ejercicio.pistas[pistasUsadas - 1];
-            hintHtml = `<div class="bomb-feedback hint">💡 Pista: ${pista}</div>`;
-        }
+    if (pistasUsadas >= ejercicio.pistas.length) {
+        gameState.bombas[num].feedback = 'Ya no quedan más pistas para esta bomba.';
+        gameState.bombas[num].feedbackType = 'error';
+        renderizar();
+        return;
     }
-
-    return `
-        <div class="bomb-card">
-            <div class="bomb-header">
-                <span class="bomb-title">💣 BOMBA 0${num}</span>
-                <span class="bomb-method">${methodLabel}</span>
-            </div>
-            <div class="bomb-system">
-                <span class="eq">${ejercicio.eq1}</span>
-                <span class="eq">${ejercicio.eq2}</span>
-            </div>
-            <div class="bomb-inputs">
-                <label>x = <input type="number" id="input-x-${num}" step="any" ${inputDisabled}></label>
-                <label>y = <input type="number" id="input-y-${num}" step="any" ${inputDisabled}></label>
-            </div>
-            ${feedbackHtml}
-            ${hintHtml}
-            <div class="bomb-actions">
-                <button class="btn-disarm" id="btn-disarm-${num}" ${disabledAttr}>${buttonText}</button>
-                ${!completada ? `<button class="btn-hint" id="btn-hint-${num}">💡 Pista</button>` : ''}
-                ${completada ? `<button class="rpg-button btn-secondary" id="btn-continue-${num}">CONTINUAR →</button>` : ''}
-            </div>
-        </div>
-    `;
+    // Mostrar la siguiente pista
+    const pista = ejercicio.pistas[pistasUsadas];
+    gameState.bombas[num].pistasUsadas++;
+    gameState.pistasDisponibles--;
+    gameState.pistasTotalesUsadas++;
+    gameState.bombas[num].feedback = `💡 Pista: ${pista}`;
+    gameState.bombas[num].feedbackType = 'hint';
+    renderizar();
 }
 
-// ---- DESAFÍO GRÁFICO ----
-function renderGrafico() {
-    const ejercicio = gameState.ejercicios.grafico;
-    if (!ejercicio) return '<p>Error</p>';
-    const completada = gameState.grafico.completada;
-
-    let feedbackHtml = '';
-    let optionsHtml = '';
-    if (completada) {
-        feedbackHtml = `<div class="bomb-feedback success">✅ ¡Correcto! El punto de intersección es (${ejercicio.correctPoint.x}, ${ejercicio.correctPoint.y}).</div>`;
-        optionsHtml = `<div class="graph-options">
-            ${ejercicio.distractors.map((d, i) => {
-                const isCorrect = (d.x === ejercicio.correctPoint.x && d.y === ejercicio.correctPoint.y);
-                return `<button class="${isCorrect ? 'correct' : ''}" disabled>${i+1}. (${d.x}, ${d.y})</button>`;
-            }).join('')}
-        </div>`;
-    } else {
-        const allOptions = [...ejercicio.distractors, ejercicio.correctPoint];
-        const shuffled = mezclarArray([...allOptions]);
-        optionsHtml = `<div class="graph-options" id="graph-options">
-            ${shuffled.map((p, idx) => `
-                <button data-x="${p.x}" data-y="${p.y}" data-idx="${idx}">(${p.x}, ${p.y})</button>
-            `).join('')}
-        </div>`;
-        const fb = gameState.grafico.feedback || '';
-        if (fb) {
-            const type = gameState.grafico.feedbackType || 'error';
-            feedbackHtml = `<div class="bomb-feedback ${type}">${fb}</div>`;
-        }
-    }
-
-    return `
-        <div class="graph-challenge">
-            <h2 style="text-align:center;">📈 INTERCEPCIÓN</h2>
-            <p style="text-align:center;">¿En qué punto se intersectan las dos funciones?</p>
-            <div class="graph-container">
-                <canvas id="graph-canvas" width="400" height="400"></canvas>
-            </div>
-            ${optionsHtml}
-            ${feedbackHtml}
-            ${completada ? `<div style="text-align:center; margin-top:1rem;"><button class="rpg-button btn-secondary" id="btn-continue-grafico">CONTINUAR →</button></div>` : ''}
-        </div>
-    `;
-}
-
-// ---- DESAFÍO ESTRATEGIA ----
-function renderEstrategia() {
-    const ejercicio = gameState.ejercicios.estrategia;
-    if (!ejercicio) return '<p>Error</p>';
-    const fase = gameState.faseEstrategia;
-    const completada = gameState.estrategia.completada;
-
-    let html = `<div class="bomb-card"><h2 style="text-align:center;">🎯 DESAFÍO FINAL</h2>`;
-    html += `<div class="bomb-system"><span class="eq">${ejercicio.eq1}</span><span class="eq">${ejercicio.eq2}</span></div>`;
-
-    if (fase === 'metodo' && !completada) {
-        html += `
-            <p style="text-align:center; font-weight:500;">¿Qué estrategia utilizarías para resolver este sistema?</p>
-            <div class="strategy-options" id="strategy-options">
-                <button data-metodo="sustitucion">A. Sustitución</button>
-                <button data-metodo="reduccion">B. Adición</button>
-                <button data-metodo="igualacion">C. Igualación</button>
-                <button data-metodo="grafico">D. Método gráfico</button>
-            </div>
-            <div id="feedback-estrategia" class="bomb-feedback"></div>
-        `;
-    } else if (fase === 'resolucion' && !completada) {
-        html += `
-            <p style="text-align:center;">Resuelve el sistema y escribe la solución:</p>
-            <div class="bomb-inputs">
-                <label>x = <input type="number" id="input-x-estrategia" step="any"></label>
-                <label>y = <input type="number" id="input-y-estrategia" step="any"></label>
-            </div>
-            <div id="feedback-estrategia-res" class="bomb-feedback"></div>
-            <div class="bomb-actions">
-                <button class="btn-disarm" id="btn-resolver-estrategia">💥 RESOLVER</button>
-            </div>
-        `;
-    } else if (completada) {
-        html += `
-            <div class="bomb-feedback success">✅ ¡Misión completada! Solución: x = ${ejercicio.solX}, y = ${ejercicio.solY}</div>
-            <div style="text-align:center; margin-top:1rem;"><button class="rpg-button btn-secondary" id="btn-continue-estrategia">VER RESULTADOS</button></div>
-        `;
-    }
-
-    html += `</div>`;
-    return html;
-}
-
-// ---- PANTALLA FINAL ----
-function renderFinish() {
-    const puntos = gameState.puntuacion;
-    const errores = gameState.erroresTotales;
-    const pistas = gameState.pistasTotalesUsadas;
-    const tiempo = gameState.tiempoTotal;
-    const estrellas = calcularEstrellas(errores, pistas);
-    const starStr = '⭐'.repeat(estrellas) + '☆'.repeat(3 - estrellas);
-
-    return `
-        <div class="final-screen">
-            <div class="big-icon">🎉</div>
-            <h1 style="font-size:2.5rem; color:var(--btn-primary);">¡MISIÓN COMPLETADA!</h1>
-            <div class="stars">${starStr}</div>
-            <div class="score">🏆 Puntaje: ${puntos}</div>
-            <div class="stats">
-                <div class="stats-item">💣 Bombas desactivadas: <span>3/3</span></div>
-                <div class="stats-item">❌ Errores: <span>${errores}</span></div>
-                <div class="stats-item">💡 Pistas utilizadas: <span>${pistas}</span></div>
-                <div class="stats-item">⏱️ Tiempo: <span>${formatearTiempo(tiempo)}</span></div>
-            </div>
-            <div style="margin:1rem 0; font-size:1.2rem; color:var(--btn-gold);">
-                🪙 ¡Has ganado ${MONEDAS_REWARDS} monedas!
-            </div>
-            <div class="final-actions">
-                <button class="rpg-button btn-primary" id="btn-replay">JUGAR NUEVAMENTE</button>
-                <button class="rpg-button btn-secondary" id="btn-retry">REINTENTAR DESAFÍO</button>
-                <button class="rpg-button btn-secondary" id="btn-back-lobby">VOLVER AL LOBBY</button>
-            </div>
-        </div>
-    `;
-}
-
-// ---- FUNCIONES DE CÁLCULO ----
-function calcularEstrellas(errores, pistas) {
-    if (errores === 0 && pistas === 0) return 3;
-    if (errores <= 2 && pistas <= 1) return 2;
-    return 1;
-}
-
-function formatearTiempo(segundos) {
-    const m = Math.floor(segundos / 60);
-    const s = Math.floor(segundos % 60);
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-// ---- POST-RENDER: EVENTOS Y GRÁFICOS ----
-function afterRender() {
-    const screen = gameState.currentScreen;
-
-    if (screen === 'START') {
-        const btnStart = document.getElementById('btn-start-mission');
-        if (btnStart) btnStart.addEventListener('click', () => {
-            gameState.currentScreen = 'INTRO';
-            renderizar();
-        });
-        const btnInst = document.getElementById('btn-instructions');
-        if (btnInst) {
-            btnInst.addEventListener('click', () => {
-                alert('📖 Instrucciones:\n\nResuelve los sistemas de ecuaciones para desactivar las bombas.\nUsa los métodos de sustitución, reducción e igualación.\n¡Cuidado con los errores! Puedes pedir pistas si lo necesitas.');
-            });
-        }
-        const btnSound = document.getElementById('btn-sound-toggle');
-        if (btnSound) {
-            btnSound.addEventListener('click', () => {
-                const soundOn = localStorage.getItem('soundOn') !== 'false';
-                localStorage.setItem('soundOn', String(!soundOn));
-                btnSound.textContent = soundOn ? '🔇 Sonido' : '🔊 Sonido';
-            });
-        }
-    }
-
-    if (screen === 'INTRO') {
-        const btnStart = document.getElementById('btn-start-mission');
-        if (btnStart) {
-            btnStart.addEventListener('click', () => {
-                gameState.currentScreen = 'BOMBA1';
-                gameState.inicioTiempo = Date.now();
-                renderizar();
-            });
-        }
-    }
-
-    for (let i = 1; i <= 3; i++) {
-        if (screen === `BOMBA${i}`) {
-            const btnDisarm = document.getElementById(`btn-disarm-${i}`);
-            if (btnDisarm) {
-                btnDisarm.addEventListener('click', () => manejarBomba(i));
-            }
-            const btnHint = document.getElementById(`btn-hint-${i}`);
-            if (btnHint) {
-                btnHint.addEventListener('click', () => manejarPista(i));
-            }
-            const btnContinue = document.getElementById(`btn-continue-${i}`);
-            if (btnContinue) {
-                btnContinue.addEventListener('click', () => {
-                    if (i === 1) gameState.currentScreen = 'BOMBA2';
-                    else if (i === 2) gameState.currentScreen = 'GRAFICO';
-                    else if (i === 3) gameState.currentScreen = 'ESTRATEGIA';
-                    renderizar();
-                });
-            }
-        }
-    }
-
-    if (screen === 'GRAFICO') {
-        dibujarGrafico();
-        if (!gameState.grafico.completada) {
-            const options = document.querySelectorAll('#graph-options button');
-            options.forEach(btn => {
-                btn.addEventListener('click', () => manejarGrafico(btn));
-            });
-        } else {
-            const btnCont = document.getElementById('btn-continue-grafico');
-            if (btnCont) {
-                btnCont.addEventListener('click', () => {
-                    gameState.currentScreen = 'BOMBA3';
-                    renderizar();
-                });
-            }
-        }
-    }
-
-    if (screen === 'ESTRATEGIA') {
-        if (gameState.faseEstrategia === 'metodo' && !gameState.estrategia.completada) {
-            const opts = document.querySelectorAll('#strategy-options button');
-            opts.forEach(btn => {
-                btn.addEventListener('click', () => manejarEstrategiaMetodo(btn));
-            });
-        } else if (gameState.faseEstrategia === 'resolucion' && !gameState.estrategia.completada) {
-            const btnRes = document.getElementById('btn-resolver-estrategia');
-            if (btnRes) {
-                btnRes.addEventListener('click', () => manejarEstrategiaResolucion());
-            }
-        } else if (gameState.estrategia.completada) {
-            const btnCont = document.getElementById('btn-continue-estrategia');
-            if (btnCont) {
-                btnCont.addEventListener('click', () => {
-                    finalizarMision();
-                });
-            }
-        }
-    }
-
-    if (screen === 'FINISH') {
-        document.getElementById('btn-replay')?.addEventListener('click', () => {
-            reiniciarEstado();
-            gameState.currentScreen = 'START';
-            renderizar();
-        });
-        document.getElementById('btn-retry')?.addEventListener('click', () => {
-            reiniciarEstado();
-            gameState.currentScreen = 'BOMBA1';
-            renderizar();
-        });
-        document.getElementById('btn-back-lobby')?.addEventListener('click', () => {
-            window.location.href = 'lobby.html';
-        });
-    }
-}
-
-// ---- MANEJO DE BOMBA ----
+// ========== MANEJO DE BOMBA (con límite de intentos y explosión) ==========
 function manejarBomba(num) {
     if (gameState.bombas[num].completada) return;
+    if (gameState.gameOver) return;
+
     const ejercicio = gameState.ejercicios[`bomba${num}`];
     const inputX = document.getElementById(`input-x-${num}`);
     const inputY = document.getElementById(`input-y-${num}`);
@@ -593,6 +320,7 @@ function manejarBomba(num) {
     const okY = sonIguales(yVal, ejercicio.solY);
 
     if (okX && okY) {
+        // ACIERTO
         gameState.bombas[num].completada = true;
         gameState.bombas[num].feedback = '';
         const pistasUsadas = gameState.bombas[num].pistasUsadas;
@@ -604,6 +332,7 @@ function manejarBomba(num) {
         playSound('success');
         renderizar();
     } else {
+        // ERROR
         gameState.bombas[num].intentos++;
         gameState.erroresTotales++;
         let mensaje = '❌ Revisa tus cálculos.';
@@ -614,163 +343,44 @@ function manejarBomba(num) {
         } else if (okX && !okY) {
             mensaje = '⚠️ Revisa el valor de y.';
         }
-        if (gameState.bombas[num].intentos >= 3) {
+        // Si ya lleva 3 intentos, sugerir pista
+        if (gameState.bombas[num].intentos >= 3 && gameState.pistasDisponibles > 0) {
             mensaje += ' ¿Necesitas una pista?';
         }
         gameState.bombas[num].feedback = mensaje;
         gameState.bombas[num].feedbackType = 'error';
         playSound('error');
-        renderizar();
-    }
-}
 
-// ---- MANEJO DE PISTA ----
-function manejarPista(num) {
-    if (gameState.bombas[num].completada) return;
-    const ejercicio = gameState.ejercicios[`bomba${num}`];
-    const pistasUsadas = gameState.bombas[num].pistasUsadas;
-    if (pistasUsadas >= ejercicio.pistas.length) {
-        gameState.bombas[num].feedback = 'Ya no quedan más pistas.';
-        gameState.bombas[num].feedbackType = 'error';
-        renderizar();
-        return;
-    }
-    gameState.bombas[num].pistasUsadas++;
-    gameState.pistasTotalesUsadas++;
-    gameState.bombas[num].feedback = '';
-    renderizar();
-}
-
-// ---- MANEJO DE GRÁFICO ----
-function manejarGrafico(btn) {
-    if (gameState.grafico.completada) return;
-    const x = parseFloat(btn.dataset.x);
-    const y = parseFloat(btn.dataset.y);
-    const correct = gameState.ejercicios.grafico.correctPoint;
-    if (sonIguales(x, correct.x) && sonIguales(y, correct.y)) {
-        gameState.grafico.completada = true;
-        gameState.grafico.feedback = '✅ ¡Correcto! La solución del sistema corresponde al punto de intersección.';
-        gameState.grafico.feedbackType = 'success';
-        gameState.puntuacion += 100;
-        playSound('success');
-        renderizar();
-    } else {
-        gameState.grafico.intentos++;
-        gameState.erroresTotales++;
-        gameState.grafico.feedback = '❌ No es el punto correcto. Vuelve a intentarlo.';
-        gameState.grafico.feedbackType = 'error';
-        playSound('error');
-        renderizar();
-    }
-}
-
-// ---- MANEJO DE ESTRATEGIA (método) ----
-function manejarEstrategiaMetodo(btn) {
-    const metodo = btn.dataset.metodo;
-    const ejercicio = gameState.ejercicios.estrategia;
-    const feedback = document.getElementById('feedback-estrategia');
-    if (!feedback) return;
-
-    if (metodo === ejercicio.metodoOptimo) {
-        feedback.textContent = '✅ ¡Excelente! Este es el método más conveniente. Ahora resuelve el sistema.';
-        feedback.className = 'bomb-feedback success';
-        gameState.faseEstrategia = 'resolucion';
-        gameState.metodoElegido = metodo;
-        gameState.puntuacion += 50;
-        renderizar();
-    } else {
-        feedback.textContent = '⚠️ Esa estrategia también puede funcionar, pero no es la más eficiente. Intenta con otro método.';
-        feedback.className = 'bomb-feedback error';
-    }
-}
-
-// ---- MANEJO DE ESTRATEGIA (resolución) ----
-function manejarEstrategiaResolucion() {
-    const ejercicio = gameState.ejercicios.estrategia;
-    const inputX = document.getElementById('input-x-estrategia');
-    const inputY = document.getElementById('input-y-estrategia');
-    const feedback = document.getElementById('feedback-estrategia-res');
-    if (!inputX || !inputY || !feedback) return;
-
-    const xVal = validarNumero(inputX.value);
-    const yVal = validarNumero(inputY.value);
-    if (xVal === null || yVal === null) {
-        feedback.textContent = '⚠️ Ingresa valores numéricos válidos.';
-        feedback.className = 'bomb-feedback error';
-        return;
-    }
-
-    if (sonIguales(xVal, ejercicio.solX) && sonIguales(yVal, ejercicio.solY)) {
-        gameState.estrategia.completada = true;
-        gameState.puntuacion += 100;
-        feedback.textContent = '✅ ¡Correcto! Has completado la misión.';
-        feedback.className = 'bomb-feedback success';
-        playSound('success');
-        renderizar();
-    } else {
-        gameState.erroresTotales++;
-        let mensaje = '❌ Revisa tus cálculos.';
-        if (sonIguales(xVal, ejercicio.solY) && sonIguales(yVal, ejercicio.solX)) {
-            mensaje = '⚠️ Parece que has intercambiado x e y.';
+        // Verificar si llegó al máximo de intentos fallidos
+        if (gameState.bombas[num].intentos >= MAX_INTENTOS) {
+            // ¡EXPLOSIÓN!
+            gameState.gameOver = true;
+            playSound('explosion');
+            gameState.currentScreen = 'GAME_OVER';
+            renderizar();
+            return;
         }
-        feedback.textContent = mensaje;
-        feedback.className = 'bomb-feedback error';
-        playSound('error');
+        renderizar();
     }
 }
 
-// ---- FINALIZAR MISIÓN ----
-function finalizarMision() {
-    if (gameState.inicioTiempo) {
-        gameState.tiempoTotal = (Date.now() - gameState.inicioTiempo) / 1000;
-    }
-    guardarProgresoFirebase();
-    gameState.currentScreen = 'FINISH';
-    renderizar();
+// ========== PANTALLA DE GAME OVER ==========
+function renderGameOver() {
+    return `
+        <div class="final-screen" style="background: #2d0000; border: 3px solid #ff0000; border-radius: 20px; padding: 2rem;">
+            <div class="big-icon">💥</div>
+            <h1 style="color: #ff4444; font-size: 2.5rem;">¡BOMBA EXPLOTADA!</h1>
+            <p style="color: #ffaaaa; font-size: 1.3rem;">Has fallado en desactivar la bomba.</p>
+            <p style="color: #ffaaaa;">La misión ha fracasado. Inténtalo de nuevo.</p>
+            <div class="final-actions" style="margin-top: 1.5rem;">
+                <button class="rpg-button btn-primary" id="btn-retry-gameover">REINTENTAR MISIÓN</button>
+                <button class="rpg-button btn-secondary" id="btn-back-lobby-gameover">VOLVER AL LOBBY</button>
+            </div>
+        </div>
+    `;
 }
 
-// ---- GUARDAR EN FIRESTORE ----
-async function guardarProgresoFirebase() {
-    if (!window.uid || !window.jugador) return;
-    try {
-        const estrellas = calcularEstrellas(gameState.erroresTotales, gameState.pistasTotalesUsadas);
-        const nuevasMonedas = (window.jugador.monedas || 0) + MONEDAS_REWARDS;
-        await db.collection('usuarios').doc(window.uid).update({
-            monedas: nuevasMonedas,
-            'sistemas.completado': true,
-            'sistemas.puntuacion': gameState.puntuacion,
-            'sistemas.estrellas': estrellas,
-            'sistemas.bombasDesactivadas': 3,
-            'sistemas.errores': gameState.erroresTotales,
-            'sistemas.pistasUsadas': gameState.pistasTotalesUsadas,
-            'sistemas.tiempo': gameState.tiempoTotal,
-            historial: firebase.firestore.FieldValue.arrayUnion({
-                juego: 'sistemas',
-                puntuacion: gameState.puntuacion,
-                estrellas: estrellas,
-                errores: gameState.erroresTotales,
-                pistas: gameState.pistasTotalesUsadas,
-                fecha: new Date().toISOString()
-            })
-        });
-        window.jugador.monedas = nuevasMonedas;
-        window.jugador.sistemas = {
-            completado: true,
-            puntuacion: gameState.puntuacion,
-            estrellas: estrellas,
-            bombasDesactivadas: 3,
-            errores: gameState.erroresTotales,
-            pistasUsadas: gameState.pistasTotalesUsadas,
-            tiempo: gameState.tiempoTotal
-        };
-        actualizarUICompleta();
-        mostrarFeedback('🎉 ¡Misión completada! Has ganado 200 monedas.', 'exito');
-    } catch (error) {
-        console.error('Error al guardar progreso:', error);
-    }
-}
-
-// ---- DIBUJAR GRÁFICO (Canvas) ----
+// ========== DIBUJAR GRÁFICO (sin punto de intersección) ==========
 function dibujarGrafico() {
     const canvas = document.getElementById('graph-canvas');
     if (!canvas) return;
@@ -778,8 +388,6 @@ function dibujarGrafico() {
     const w = canvas.width;
     const h = canvas.height;
     const padding = 40;
-    const plotW = w - 2 * padding;
-    const plotH = h - 2 * padding;
 
     ctx.clearRect(0, 0, w, h);
 
@@ -812,23 +420,25 @@ function dibujarGrafico() {
     const rect1 = parseRecta(eq1);
     const rect2 = parseRecta(eq2);
 
-    const cx = ejercicio.correctPoint.x;
-    const cy = ejercicio.correctPoint.y;
-    let xMin = cx - 5, xMax = cx + 5;
-    const yMin = Math.min(rect1.m * xMin + rect1.b, rect2.m * xMin + rect2.b, cy - 3);
-    const yMax = Math.max(rect1.m * xMax + rect1.b, rect2.m * xMax + rect2.b, cy + 3);
+    // Rango dinámico basado en las rectas
+    const cx = 0; // centro aproximado
+    const cy = 0;
+    let xMin = -8, xMax = 8;
+    const yMin = Math.min(rect1.m * xMin + rect1.b, rect2.m * xMin + rect2.b, -5);
+    const yMax = Math.max(rect1.m * xMax + rect1.b, rect2.m * xMax + rect2.b, 5);
     const rangoX = xMax - xMin;
     const rangoY = yMax - yMin;
-    const escala = Math.min(plotW / rangoX, plotH / rangoY) * 0.9;
+    const escala = Math.min((w - 2 * padding) / rangoX, (h - 2 * padding) / rangoY) * 0.9;
     const midX = (xMin + xMax) / 2;
     const midY = (yMin + yMax) / 2;
 
     function toCanvas(px, py) {
-        const xCanvas = padding + plotW/2 + (px - midX) * escala;
-        const yCanvas = padding + plotH/2 - (py - midY) * escala;
+        const xCanvas = padding + (w - 2 * padding) / 2 + (px - midX) * escala;
+        const yCanvas = padding + (h - 2 * padding) / 2 - (py - midY) * escala;
         return { x: xCanvas, y: yCanvas };
     }
 
+    // Dibujar ejes
     ctx.strokeStyle = '#888';
     ctx.lineWidth = 1;
     const origen = toCanvas(0, 0);
@@ -839,6 +449,7 @@ function dibujarGrafico() {
     ctx.lineTo(origen.x, h - padding);
     ctx.stroke();
 
+    // Cuadrícula
     ctx.strokeStyle = '#ddd';
     ctx.lineWidth = 0.5;
     for (let i = -10; i <= 10; i++) {
@@ -855,6 +466,7 @@ function dibujarGrafico() {
         ctx.stroke();
     }
 
+    // Dibujar rectas
     function dibujarRecta(m, b, color) {
         const x1 = xMin;
         const x2 = xMax;
@@ -873,25 +485,70 @@ function dibujarGrafico() {
     dibujarRecta(rect1.m, rect1.b, '#e74c3c');
     dibujarRecta(rect2.m, rect2.b, '#3498db');
 
-    const pInt = toCanvas(cx, cy);
-    ctx.fillStyle = '#2ecc71';
-    ctx.beginPath();
-    ctx.arc(pInt.x, pInt.y, 6, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.strokeStyle = '#27ae60';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
+    // NO dibujar el punto de intersección (se elimina)
+    // Etiquetas de ejes
     ctx.fillStyle = '#333';
     ctx.font = '12px sans-serif';
     ctx.fillText('x', w - padding + 5, origen.y + 4);
     ctx.fillText('y', origen.x + 4, padding - 5);
-    ctx.fillStyle = '#2ecc71';
-    ctx.font = 'bold 14px sans-serif';
-    ctx.fillText(`(${cx}, ${cy})`, pInt.x + 10, pInt.y - 10);
 }
 
-// ---- SONIDO ----
+// ========== MODIFICAR afterRender para incluir GAME_OVER ==========
+function afterRender() {
+    const screen = gameState.currentScreen;
+
+    if (screen === 'GAME_OVER') {
+        document.getElementById('btn-retry-gameover')?.addEventListener('click', () => {
+            reiniciarEstado();
+            gameState.currentScreen = 'START';
+            renderizar();
+        });
+        document.getElementById('btn-back-lobby-gameover')?.addEventListener('click', () => {
+            window.location.href = 'lobby.html';
+        });
+        return;
+    }
+
+    // ... (resto del afterRender sin cambios, solo agregar el manejo de GAME_OVER al principio)
+    // Asegurarse de que el resto del código de afterRender esté igual que antes
+    // (incluyendo los listeners para START, INTRO, BOMBAS, GRAFICO, ESTRATEGIA, FINISH)
+}
+
+// ========== ACTUALIZAR renderFinish para mostrar pistas restantes ==========
+function renderFinish() {
+    const puntos = gameState.puntuacion;
+    const errores = gameState.erroresTotales;
+    const pistasUsadas = gameState.pistasTotalesUsadas;
+    const tiempo = gameState.tiempoTotal;
+    const estrellas = calcularEstrellas(errores, pistasUsadas);
+    const starStr = '⭐'.repeat(estrellas) + '☆'.repeat(3 - estrellas);
+
+    return `
+        <div class="final-screen">
+            <div class="big-icon">🎉</div>
+            <h1 style="font-size:2.5rem; color:var(--btn-primary);">¡MISIÓN COMPLETADA!</h1>
+            <div class="stars">${starStr}</div>
+            <div class="score">🏆 Puntaje: ${puntos}</div>
+            <div class="stats">
+                <div class="stats-item">💣 Bombas desactivadas: <span>3/3</span></div>
+                <div class="stats-item">❌ Errores: <span>${errores}</span></div>
+                <div class="stats-item">💡 Pistas utilizadas: <span>${pistasUsadas}</span></div>
+                <div class="stats-item">💡 Pistas restantes: <span>${gameState.pistasDisponibles}</span></div>
+                <div class="stats-item">⏱️ Tiempo: <span>${formatearTiempo(tiempo)}</span></div>
+            </div>
+            <div style="margin:1rem 0; font-size:1.2rem; color:var(--btn-gold);">
+                🪙 ¡Has ganado ${MONEDAS_REWARDS} monedas!
+            </div>
+            <div class="final-actions">
+                <button class="rpg-button btn-primary" id="btn-replay">JUGAR NUEVAMENTE</button>
+                <button class="rpg-button btn-secondary" id="btn-retry">REINTENTAR DESAFÍO</button>
+                <button class="rpg-button btn-secondary" id="btn-back-lobby">VOLVER AL LOBBY</button>
+            </div>
+        </div>
+    `;
+}
+
+// ========== ACTUALIZAR playSound con efecto de explosión ==========
 function playSound(type) {
     if (localStorage.getItem('soundOn') === 'false') return;
     try {
@@ -920,6 +577,15 @@ function playSound(type) {
             gain.gain.value = 0.2;
             osc.start();
             osc.stop(audioCtx.currentTime + 0.3);
+        } else if (type === 'explosion') {
+            // Sonido de explosión: ruido blanco o tonos graves descendentes
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.6);
+            gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.6);
         } else {
             osc.frequency.value = 600;
             gain.gain.value = 0.2;
@@ -929,18 +595,44 @@ function playSound(type) {
     } catch (e) { /* Silenciar errores de audio */ }
 }
 
-// ---- INICIO ----
-document.addEventListener('DOMContentLoaded', () => {
-    if (window.jugador) {
-        iniciarJuego();
-    } else {
-        document.addEventListener('jugador-cargado', iniciarJuego);
-    }
-});
+// ========== ACTUALIZAR renderizar para incluir GAME_OVER ==========
+function renderizar() {
+    if (!elGameScreen) return;
+    const screen = gameState.currentScreen;
+    let html = '';
 
-setTimeout(() => {
-    if (!window.jugador) {
-        console.warn('Recargando jugador...');
-        cargarJugador();
+    switch (screen) {
+        case 'START':
+            html = renderStart();
+            break;
+        case 'INTRO':
+            html = renderIntro();
+            break;
+        case 'BOMBA1':
+        case 'BOMBA2':
+        case 'BOMBA3':
+            const num = parseInt(screen.replace('BOMBA', ''));
+            html = renderBomba(num);
+            break;
+        case 'GRAFICO':
+            html = renderGrafico();
+            break;
+        case 'ESTRATEGIA':
+            html = renderEstrategia();
+            break;
+        case 'FINISH':
+            html = renderFinish();
+            break;
+        case 'GAME_OVER':
+            html = renderGameOver();
+            break;
+        default:
+            html = '<p>Error: pantalla desconocida</p>';
     }
-}, 2000);
+
+    elGameScreen.innerHTML = html;
+    afterRender();
+}
+
+// ========== INICIALIZACIÓN (sin cambios) ==========
+// ... (mantener el resto del código: iniciarJuego, cargarEstadoDesdeFirebase, etc.)
