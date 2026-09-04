@@ -1110,7 +1110,10 @@ function iniciarJuego() {
         console.error('No se encontró #game-screen');
         return;
     }
-
+    const regionEl = document.getElementById('player-region');
+    if (regionEl) {
+        regionEl.textContent = '🚀 Misión: Sistemas';
+    }
     if (!window.jugador) {
         document.addEventListener('jugador-cargado', () => {
             cargarEstadoDesdeFirebase();
