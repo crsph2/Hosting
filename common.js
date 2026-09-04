@@ -18,6 +18,18 @@ async function cargarJugador() {
         if (!window.jugador.equipo.simbolos) window.jugador.equipo.simbolos = [];
         if (!window.jugador.factorizados) window.jugador.factorizados = { nivel: 1, xp: 0, region: 'Aldea del Factor Común', racha: 0 };
         if (!window.jugador.incognita) window.jugador.incognita = { nivel: 1, xp: 0, region: 'Aldea de las Ecuaciones', racha: 0 };
+        // NUEVO: campo sistemas
+        if (!window.jugador.sistemas) {
+            window.jugador.sistemas = {
+                completado: false,
+                puntuacion: 0,
+                estrellas: 0,
+                bombasDesactivadas: 0,
+                errores: 0,
+                pistasUsadas: 0,
+                tiempo: 0
+            };
+        }
         if (!window.jugador.nombre) window.jugador.nombre = 'Trotamundos';
 
         actualizarUICompleta();
