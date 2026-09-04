@@ -1,14 +1,33 @@
 // ============================================================
-// sistemas.js – "Operación: Sistema" (VERSIÓN COMPLETA)
+// sistemas.js – "Operación: Sistema" (VERSIÓN FINAL)
 // ============================================================
 
 // ---- CONSTANTES ----
 const XP_POR_NIVEL = 100;
 const MONEDAS_REWARDS = 200;
 const MAX_PISTAS = 5;
-const MAX_INTENTOS = 5;
+const MAX_INTENTOS_GLOBAL = 5; // 5 fallos en total
 
-// ========== GENERADORES DE SISTEMAS ==========
+// ========== FORMATEADOR DE ECUACIONES (oculta coeficientes 1) ==========
+function formatearEcuacionConCoeficientes(terminos) {
+    // terminos es un array de objetos {coef, variable, signo?}
+    // Simplificamos: para cada término, si |coef| === 1, omitimos el número.
+    // Esta función se usa en los generadores.
+    function terminoStr(coef, varName) {
+        if (coef === 0) return '';
+        if (varName === '') {
+            // término independiente
+            return coef;
+        }
+        if (coef === 1) return varName;
+        if (coef === -1) return '-' + varName;
+        return coef + varName;
+    }
+    // Pero es más fácil aplicar directamente en la generación.
+    // Ajustamos los generadores para que devuelvan ecuaciones con formato limpio.
+}
+
+// ========== GENERADORES DE SISTEMAS (con coeficientes legibles) ==========
 
 function generarSistemaSustitucion() {
     let x, y, m, b, a, c;
@@ -23,12 +42,15 @@ function generarSistemaSustitucion() {
         intentos++;
     } while ((x === 0 && y === 0) || intentos < 3 || Math.abs(b) > 10 || Math.abs(c) > 20);
 
-    const eq1 = `y = ${m}x + ${b}`;
-    const eq2 = `${a}x + y = ${c}`;
+    // Formatear coeficientes 1
+    let mStr = (m === 1) ? '' : (m === -1 ? '-' : m);
+    let aStr = (a === 1) ? '' : (a === -1 ? '-' : a);
+    const eq1 = `y = ${mStr}x + ${b}`;
+    const eq2 = `${aStr}x + y = ${c}`;
     const pistas = [
         'Busca una ecuación donde una variable ya esté despejada.',
-        `Sustituye y = ${m}x + ${b} en la segunda ecuación.`,
-        `Obtendrás una ecuación con una sola variable: ${a}x + (${m}x + ${b}) = ${c}. Resuelve y luego encuentra y.`
+        `Sustituye y = ${mStr}x + ${b} en la segunda ecuación.`,
+        `Obtendrás una ecuación con una sola variable: ${aStr}x + (${mStr}x + ${b}) = ${c}. Resuelve y luego encuentra y.`
     ];
     return { method: 'sustitucion', eq1, eq2, solX: x, solY: y, pistas };
 }
@@ -49,8 +71,12 @@ function generarSistemaReduccion() {
         intentos++;
     } while ((x === 0 && y === 0) || Math.abs(c) > 30 || Math.abs(f) > 30 || intentos < 3);
 
-    const eq1 = `${a}x + ${b}y = ${c}`;
-    const eq2 = `${d}x + ${e}y = ${f}`;
+    let aStr = (a === 1) ? '' : (a === -1 ? '-' : a);
+    let bStr = (b === 1) ? '' : (b === -1 ? '-' : b);
+    let dStr = (d === 1) ? '' : (d === -1 ? '-' : d);
+    let eStr = (e === 1) ? '' : (e === -1 ? '-' : e);
+    const eq1 = `${aStr}x + ${bStr}y = ${c}`;
+    const eq2 = `${dStr}x + ${eStr}y = ${f}`;
     const pistas = [
         'Observa que los coeficientes de y son opuestos (suma las ecuaciones).',
         'Suma ambas ecuaciones para eliminar y.',
@@ -73,11 +99,13 @@ function generarSistemaIgualacion() {
         intentos++;
     } while ((x === 0 && y === 0) || Math.abs(b1) > 15 || Math.abs(b2) > 15 || intentos < 3);
 
-    const eq1 = `y = ${m1}x + ${b1}`;
-    const eq2 = `y = ${m2}x + ${b2}`;
+    let m1Str = (m1 === 1) ? '' : (m1 === -1 ? '-' : m1);
+    let m2Str = (m2 === 1) ? '' : (m2 === -1 ? '-' : m2);
+    const eq1 = `y = ${m1Str}x + ${b1}`;
+    const eq2 = `y = ${m2Str}x + ${b2}`;
     const pistas = [
         'Despeja y en ambas ecuaciones (ya lo están).',
-        `Iguala las expresiones: ${m1}x + ${b1} = ${m2}x + ${b2}.`,
+        `Iguala las expresiones: ${m1Str}x + ${b1} = ${m2Str}x + ${b2}.`,
         `Resuelve: ${m1-m2}x = ${b2-b1}, x = ${x}. Sustituye para y.`
     ];
     return { method: 'igualacion', eq1, eq2, solX: x, solY: y, pistas };
@@ -97,8 +125,10 @@ function generarSistemaGrafico() {
         intentos++;
     } while ((x === 0 && y === 0) || Math.abs(b1) > 15 || Math.abs(b2) > 15 || intentos < 3);
 
-    const eq1 = `y = ${m1}x + ${b1}`;
-    const eq2 = `y = ${m2}x + ${b2}`;
+    let m1Str = (m1 === 1) ? '' : (m1 === -1 ? '-' : m1);
+    let m2Str = (m2 === 1) ? '' : (m2 === -1 ? '-' : m2);
+    const eq1 = `y = ${m1Str}x + ${b1}`;
+    const eq2 = `y = ${m2Str}x + ${b2}`;
     const correctPoint = { x, y };
 
     const distractors = [];
@@ -144,8 +174,10 @@ function generarSistemaEstrategia() {
                 let a1 = Math.floor(Math.random() * 5) + 1;
                 let c1 = a1 * x + y;
                 if (Math.abs(b1) < 15 && Math.abs(c1) < 30) {
-                    const eq1 = `y = ${m}x + ${b1}`;
-                    const eq2 = `${a1}x + y = ${c1}`;
+                    let mStr = (m === 1) ? '' : (m === -1 ? '-' : m);
+                    let aStr = (a1 === 1) ? '' : (a1 === -1 ? '-' : a1);
+                    const eq1 = `y = ${mStr}x + ${b1}`;
+                    const eq2 = `${aStr}x + y = ${c1}`;
                     return { eq1, eq2, solX: x, solY: y, metodoOptimo: 'sustitucion', pistas: [] };
                 }
                 intentos++;
@@ -163,8 +195,12 @@ function generarSistemaEstrategia() {
                 let c1 = a1 * x + b1 * y;
                 let f1 = d1 * x + e1 * y;
                 if (Math.abs(c1) < 30 && Math.abs(f1) < 30) {
-                    const eq1 = `${a1}x + ${b1}y = ${c1}`;
-                    const eq2 = `${d1}x + ${e1}y = ${f1}`;
+                    let aStr = (a1 === 1) ? '' : (a1 === -1 ? '-' : a1);
+                    let bStr = (b1 === 1) ? '' : (b1 === -1 ? '-' : b1);
+                    let dStr = (d1 === 1) ? '' : (d1 === -1 ? '-' : d1);
+                    let eStr = (e1 === 1) ? '' : (e1 === -1 ? '-' : e1);
+                    const eq1 = `${aStr}x + ${bStr}y = ${c1}`;
+                    const eq2 = `${dStr}x + ${eStr}y = ${f1}`;
                     return { eq1, eq2, solX: x, solY: y, metodoOptimo: 'reduccion', pistas: [] };
                 }
                 intentos++;
@@ -180,8 +216,10 @@ function generarSistemaEstrategia() {
                 let b1 = y - m1 * x;
                 let b2 = y - m2 * x;
                 if (Math.abs(b1) < 15 && Math.abs(b2) < 15) {
-                    const eq1 = `y = ${m1}x + ${b1}`;
-                    const eq2 = `y = ${m2}x + ${b2}`;
+                    let m1Str = (m1 === 1) ? '' : (m1 === -1 ? '-' : m1);
+                    let m2Str = (m2 === 1) ? '' : (m2 === -1 ? '-' : m2);
+                    const eq1 = `y = ${m1Str}x + ${b1}`;
+                    const eq2 = `y = ${m2Str}x + ${b2}`;
                     return { eq1, eq2, solX: x, solY: y, metodoOptimo: 'igualacion', pistas: [] };
                 }
                 intentos++;
@@ -237,14 +275,14 @@ function reiniciarEstado() {
     gameState = {
         currentScreen: 'START',
         bombas: {
-            1: { completada: false, intentos: 0, pistasUsadas: 0 },
-            2: { completada: false, intentos: 0, pistasUsadas: 0 },
-            3: { completada: false, intentos: 0, pistasUsadas: 0 }
+            1: { completada: false, pistasUsadas: 0 },
+            2: { completada: false, pistasUsadas: 0 },
+            3: { completada: false, pistasUsadas: 0 }
         },
         grafico: { completada: false, intentos: 0 },
         estrategia: { completada: false, intentos: 0, metodoElegido: null },
         puntuacion: 0,
-        erroresTotales: 0,
+        erroresTotales: 0,          // Contador global de fallos
         pistasDisponibles: MAX_PISTAS,
         pistasTotalesUsadas: 0,
         inicioTiempo: null,
@@ -318,16 +356,22 @@ function renderBomba(num) {
     if (completada) {
         feedbackHtml = `<div class="bomb-feedback success">✅ ¡Bomba desactivada! Solución: x = ${ejercicio.solX}, y = ${ejercicio.solY}</div>`;
     } else {
+        // Mostrar feedback general (errores, pistas)
         const fb = gameState.bombas[num].feedback || '';
         if (fb) {
             const type = gameState.bombas[num].feedbackType || 'error';
             feedbackHtml = `<div class="bomb-feedback ${type}">${fb}</div>`;
         }
-        if (pistasUsadas > 0 && pistasUsadas <= ejercicio.pistas.length) {
-            const pista = ejercicio.pistas[pistasUsadas - 1];
-            hintHtml = `<div class="bomb-feedback hint">💡 Pista: ${pista}</div>`;
-        }
     }
+
+    // Mostrar pistas solo si se han usado y no está completada (evitar duplicado)
+    if (!completada && pistasUsadas > 0 && pistasUsadas <= ejercicio.pistas.length) {
+        const pista = ejercicio.pistas[pistasUsadas - 1];
+        hintHtml = `<div class="bomb-feedback hint">💡 Pista: ${pista}</div>`;
+    }
+
+    // Mostrar contador de fallos global
+    const fallosRestantes = MAX_INTENTOS_GLOBAL - gameState.erroresTotales;
 
     return `
         <div class="bomb-card">
@@ -335,6 +379,11 @@ function renderBomba(num) {
                 <span class="bomb-title">💣 BOMBA 0${num}</span>
                 <span class="bomb-method">${methodLabel}</span>
                 <span style="font-size:0.8rem; background:#333; color:#fff; padding:0.2rem 0.8rem; border-radius:10px;">Pistas restantes: ${gameState.pistasDisponibles}</span>
+            </div>
+            <div style="text-align:center; margin: 5px 0;">
+                <span style="background: #ff6b6b; color: #fff; padding: 0.2rem 0.8rem; border-radius: 20px; font-weight: bold;">
+                    ⚠️ Intentos fallidos restantes: ${fallosRestantes}
+                </span>
             </div>
             <div class="bomb-system">
                 <span class="eq">${ejercicio.eq1}</span>
@@ -351,7 +400,6 @@ function renderBomba(num) {
                 ${!completada ? `<button class="btn-hint" id="btn-hint-${num}">💡 Pista (${gameState.pistasDisponibles})</button>` : ''}
                 ${completada ? `<button class="rpg-button btn-secondary" id="btn-continue-${num}">CONTINUAR →</button>` : ''}
             </div>
-            <div style="text-align:center; font-size:0.8rem; color:#888;">Intentos fallidos: ${gameState.bombas[num].intentos}/${MAX_INTENTOS}</div>
         </div>
     `;
 }
@@ -390,8 +438,8 @@ function renderGrafico() {
         <div class="graph-challenge">
             <h2 style="text-align:center;">📈 INTERCEPCIÓN</h2>
             <p style="text-align:center;">¿En qué punto se intersectan las dos funciones?</p>
-            <div class="graph-container">
-                <canvas id="graph-canvas" width="400" height="400"></canvas>
+            <div class="graph-container" style="touch-action: pinch-zoom; overflow: auto; max-width: 100%;">
+                <canvas id="graph-canvas" width="600" height="600" style="width:100%; height:auto; max-width:600px; display:block; margin:0 auto;"></canvas>
             </div>
             ${optionsHtml}
             ${feedbackHtml}
@@ -459,7 +507,7 @@ function renderFinish() {
             <div class="score">🏆 Puntaje: ${puntos}</div>
             <div class="stats">
                 <div class="stats-item">💣 Bombas desactivadas: <span>3/3</span></div>
-                <div class="stats-item">❌ Errores: <span>${errores}</span></div>
+                <div class="stats-item">❌ Errores totales: <span>${errores}</span></div>
                 <div class="stats-item">💡 Pistas utilizadas: <span>${pistas}</span></div>
                 <div class="stats-item">💡 Pistas restantes: <span>${gameState.pistasDisponibles}</span></div>
                 <div class="stats-item">⏱️ Tiempo: <span>${formatearTiempo(tiempo)}</span></div>
@@ -656,10 +704,19 @@ function afterRender() {
     }
 }
 
-// ========== MANEJO DE BOMBAS ==========
+// ========== MANEJO DE BOMBAS (con errores globales) ==========
 function manejarBomba(num) {
     if (gameState.bombas[num].completada) return;
     if (gameState.gameOver) return;
+
+    // Verificar si ya se alcanzó el máximo de errores globales
+    if (gameState.erroresTotales >= MAX_INTENTOS_GLOBAL) {
+        gameState.gameOver = true;
+        playSound('explosion');
+        gameState.currentScreen = 'GAME_OVER';
+        renderizar();
+        return;
+    }
 
     const ejercicio = gameState.ejercicios[`bomba${num}`];
     const inputX = document.getElementById(`input-x-${num}`);
@@ -690,7 +747,7 @@ function manejarBomba(num) {
         playSound('success');
         renderizar();
     } else {
-        gameState.bombas[num].intentos++;
+        // Incrementar error global
         gameState.erroresTotales++;
         let mensaje = '❌ Revisa tus cálculos.';
         if (sonIguales(xVal, ejercicio.solY) && sonIguales(yVal, ejercicio.solX)) {
@@ -700,14 +757,15 @@ function manejarBomba(num) {
         } else if (okX && !okY) {
             mensaje = '⚠️ Revisa el valor de y.';
         }
-        if (gameState.bombas[num].intentos >= 3 && gameState.pistasDisponibles > 0) {
+        if (gameState.erroresTotales >= 3 && gameState.pistasDisponibles > 0) {
             mensaje += ' ¿Necesitas una pista?';
         }
         gameState.bombas[num].feedback = mensaje;
         gameState.bombas[num].feedbackType = 'error';
         playSound('error');
 
-        if (gameState.bombas[num].intentos >= MAX_INTENTOS) {
+        // Verificar si alcanzó el máximo de errores globales
+        if (gameState.erroresTotales >= MAX_INTENTOS_GLOBAL) {
             gameState.gameOver = true;
             playSound('explosion');
             gameState.currentScreen = 'GAME_OVER';
@@ -734,6 +792,7 @@ function manejarPista(num) {
         renderizar();
         return;
     }
+    // Mostrar la pista SOLO en el feedback de la bomba (sin duplicar)
     const pista = ejercicio.pistas[pistasUsadas];
     gameState.bombas[num].pistasUsadas++;
     gameState.pistasDisponibles--;
@@ -758,6 +817,14 @@ function manejarGrafico(btn) {
     } else {
         gameState.grafico.intentos++;
         gameState.erroresTotales++;
+        // Verificar si alcanzó el máximo de errores globales
+        if (gameState.erroresTotales >= MAX_INTENTOS_GLOBAL) {
+            gameState.gameOver = true;
+            playSound('explosion');
+            gameState.currentScreen = 'GAME_OVER';
+            renderizar();
+            return;
+        }
         gameState.grafico.feedback = '❌ No es el punto correcto. Vuelve a intentarlo.';
         gameState.grafico.feedbackType = 'error';
         playSound('error');
@@ -808,6 +875,13 @@ function manejarEstrategiaResolucion() {
         renderizar();
     } else {
         gameState.erroresTotales++;
+        if (gameState.erroresTotales >= MAX_INTENTOS_GLOBAL) {
+            gameState.gameOver = true;
+            playSound('explosion');
+            gameState.currentScreen = 'GAME_OVER';
+            renderizar();
+            return;
+        }
         let mensaje = '❌ Revisa tus cálculos.';
         if (sonIguales(xVal, ejercicio.solY) && sonIguales(yVal, ejercicio.solX)) {
             mensaje = '⚠️ Parece que has intercambiado x e y.';
@@ -867,14 +941,14 @@ async function guardarProgresoFirebase() {
     }
 }
 
-// ========== DIBUJAR GRÁFICO (sin punto) ==========
+// ========== DIBUJAR GRÁFICO (sin punto, con zoom) ==========
 function dibujarGrafico() {
     const canvas = document.getElementById('graph-canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const w = canvas.width;
-    const h = canvas.height;
-    const padding = 40;
+    const w = canvas.width;  // 600
+    const h = canvas.height; // 600
+    const padding = 50;
 
     ctx.clearRect(0, 0, w, h);
 
@@ -907,6 +981,7 @@ function dibujarGrafico() {
     const rect1 = parseRecta(eq1);
     const rect2 = parseRecta(eq2);
 
+    // Rango dinámico para que las rectas se vean bien
     let xMin = -8, xMax = 8;
     const yMin = Math.min(rect1.m * xMin + rect1.b, rect2.m * xMin + rect2.b, -5);
     const yMax = Math.max(rect1.m * xMax + rect1.b, rect2.m * xMax + rect2.b, 5);
@@ -922,8 +997,9 @@ function dibujarGrafico() {
         return { x: xCanvas, y: yCanvas };
     }
 
+    // Dibujar ejes
     ctx.strokeStyle = '#888';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1.5;
     const origen = toCanvas(0, 0);
     ctx.beginPath();
     ctx.moveTo(padding, origen.y);
@@ -932,6 +1008,7 @@ function dibujarGrafico() {
     ctx.lineTo(origen.x, h - padding);
     ctx.stroke();
 
+    // Cuadrícula
     ctx.strokeStyle = '#ddd';
     ctx.lineWidth = 0.5;
     for (let i = -10; i <= 10; i++) {
@@ -948,6 +1025,7 @@ function dibujarGrafico() {
         ctx.stroke();
     }
 
+    // Dibujar rectas
     function dibujarRecta(m, b, color) {
         const x1 = xMin;
         const x2 = xMax;
@@ -956,7 +1034,7 @@ function dibujarGrafico() {
         const p1 = toCanvas(x1, y1);
         const p2 = toCanvas(x2, y2);
         ctx.strokeStyle = color;
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
         ctx.lineTo(p2.x, p2.y);
@@ -966,10 +1044,13 @@ function dibujarGrafico() {
     dibujarRecta(rect1.m, rect1.b, '#e74c3c');
     dibujarRecta(rect2.m, rect2.b, '#3498db');
 
+    // NO dibujar el punto de intersección
+
+    // Etiquetas de ejes
     ctx.fillStyle = '#333';
-    ctx.font = '12px sans-serif';
-    ctx.fillText('x', w - padding + 5, origen.y + 4);
-    ctx.fillText('y', origen.x + 4, padding - 5);
+    ctx.font = '14px sans-serif';
+    ctx.fillText('x', w - padding + 10, origen.y + 6);
+    ctx.fillText('y', origen.x + 6, padding - 10);
 }
 
 // ========== SONIDO ==========
