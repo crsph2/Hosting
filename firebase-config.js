@@ -1,4 +1,5 @@
 
+// firebase-config.js - Versión COMPATIBLE con Firebase v8
 const firebaseConfig = {
   apiKey: "AIzaSyCxNI_HWssg9gtAoNxCULxZupzZSWmYXv4",
   authDomain: "pruebas-1ac9e.firebaseapp.com",
@@ -9,6 +10,8 @@ const firebaseConfig = {
   measurementId: "G-5D65K25VKQ"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+// Inicializar Firebase con el objeto global 'firebase'
+firebase.initializeApp(firebaseConfig);
+
+// Obtener la instancia de Firestore
+const db = firebase.firestore();
