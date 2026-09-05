@@ -1,5 +1,5 @@
 // ============================================================
-// sistemas.js – "Operación: Sistema" (VERSIÓN FINAL)
+// sistemas.js – "Operación: Sistema" (VERSIÓN FINAL COMPLETA)
 // ============================================================
 
 // ---- CONSTANTES ----
@@ -8,26 +8,12 @@ const MONEDAS_REWARDS = 200;
 const MAX_PISTAS = 5;
 const MAX_INTENTOS_GLOBAL = 5; // 5 fallos en total
 
-// ========== FORMATEADOR DE ECUACIONES (oculta coeficientes 1) ==========
-function formatearEcuacionConCoeficientes(terminos) {
-    // terminos es un array de objetos {coef, variable, signo?}
-    // Simplificamos: para cada término, si |coef| === 1, omitimos el número.
-    // Esta función se usa en los generadores.
-    function terminoStr(coef, varName) {
-        if (coef === 0) return '';
-        if (varName === '') {
-            // término independiente
-            return coef;
-        }
-        if (coef === 1) return varName;
-        if (coef === -1) return '-' + varName;
-        return coef + varName;
-    }
-    // Pero es más fácil aplicar directamente en la generación.
-    // Ajustamos los generadores para que devuelvan ecuaciones con formato limpio.
-}
+// ---- VARIABLES GLOBALES PARA EL GRÁFICO ----
+let graphZoom = 1;
+let graphPanX = 0;
+let graphPanY = 0;
 
-// ========== GENERADORES DE SISTEMAS (con coeficientes legibles) ==========
+// ========== GENERADORES DE SISTEMAS (coeficientes 1 ocultos) ==========
 
 function generarSistemaSustitucion() {
     let x, y, m, b, a, c;
@@ -42,7 +28,6 @@ function generarSistemaSustitucion() {
         intentos++;
     } while ((x === 0 && y === 0) || intentos < 3 || Math.abs(b) > 10 || Math.abs(c) > 20);
 
-    // Formatear coeficientes 1
     let mStr = (m === 1) ? '' : (m === -1 ? '-' : m);
     let aStr = (a === 1) ? '' : (a === -1 ? '-' : a);
     const eq1 = `y = ${mStr}x + ${b}`;
@@ -282,7 +267,7 @@ function reiniciarEstado() {
         grafico: { completada: false, intentos: 0 },
         estrategia: { completada: false, intentos: 0, metodoElegido: null },
         puntuacion: 0,
-        erroresTotales: 0,          // Contador global de fallos
+        erroresTotales: 0,
         pistasDisponibles: MAX_PISTAS,
         pistasTotalesUsadas: 0,
         inicioTiempo: null,
@@ -306,6 +291,11 @@ function reiniciarEstado() {
     gameState.ejercicios.grafico = grafico;
     gameState.ejercicios.grafico.distractors = mezclarArray([...grafico.distractors]);
     gameState.ejercicios.estrategia = generarSistemaEstrategia();
+
+    // Reiniciar zoom del gráfico
+    graphZoom = 1;
+    graphPanX = 0;
+    graphPanY = 0;
 }
 
 // ========== RENDERIZADO ==========
@@ -339,7 +329,6 @@ function renderBomba(num) {
     const ejercicio = gameState.ejercicios[`bomba${num}`];
     if (!ejercicio) return '<p>Error: ejercicio no encontrado</p>';
     const completada = gameState.bombas[num].completada;
-    const pistasUsadas = gameState.bombas[num].pistasUsadas;
     const methodNames = {
         sustitucion: 'SUSTITUCIÓN',
         reduccion: 'REDUCCIÓN',
@@ -348,7 +337,6 @@ function renderBomba(num) {
     const methodLabel = methodNames[ejercicio.method] || 'MÉTODO';
 
     let feedbackHtml = '';
-    let hintHtml = '';
     let disabledAttr = completada ? 'disabled' : '';
     let inputDisabled = completada ? 'disabled' : '';
     let buttonText = completada ? '✅ Desactivada' : '💥 DESACTIVAR';
@@ -356,7 +344,6 @@ function renderBomba(num) {
     if (completada) {
         feedbackHtml = `<div class="bomb-feedback success">✅ ¡Bomba desactivada! Solución: x = ${ejercicio.solX}, y = ${ejercicio.solY}</div>`;
     } else {
-        // Mostrar feedback general (errores, pistas)
         const fb = gameState.bombas[num].feedback || '';
         if (fb) {
             const type = gameState.bombas[num].feedbackType || 'error';
@@ -364,13 +351,6 @@ function renderBomba(num) {
         }
     }
 
-    // Mostrar pistas solo si se han usado y no está completada (evitar duplicado)
-    if (!completada && pistasUsadas > 0 && pistasUsadas <= ejercicio.pistas.length) {
-        const pista = ejercicio.pistas[pistasUsadas - 1];
-        hintHtml = `<div class="bomb-feedback hint">💡 Pista: ${pista}</div>`;
-    }
-
-    // Mostrar contador de fallos global
     const fallosRestantes = MAX_INTENTOS_GLOBAL - gameState.erroresTotales;
 
     return `
@@ -394,7 +374,6 @@ function renderBomba(num) {
                 <label>y = <input type="number" id="input-y-${num}" step="any" ${inputDisabled}></label>
             </div>
             ${feedbackHtml}
-            ${hintHtml}
             <div class="bomb-actions">
                 <button class="btn-disarm" id="btn-disarm-${num}" ${disabledAttr}>${buttonText}</button>
                 ${!completada ? `<button class="btn-hint" id="btn-hint-${num}">💡 Pista (${gameState.pistasDisponibles})</button>` : ''}
@@ -438,8 +417,13 @@ function renderGrafico() {
         <div class="graph-challenge">
             <h2 style="text-align:center;">📈 INTERCEPCIÓN</h2>
             <p style="text-align:center;">¿En qué punto se intersectan las dos funciones?</p>
-            <div class="graph-container" style="touch-action: pinch-zoom; overflow: auto; max-width: 100%;">
-                <canvas id="graph-canvas" width="600" height="600" style="width:100%; height:auto; max-width:600px; display:block; margin:0 auto;"></canvas>
+            <div style="display:flex; justify-content:center; gap:0.5rem; margin:0.5rem 0; flex-wrap:wrap;">
+                <button class="rpg-button btn-secondary" id="zoom-in" style="padding:0.2rem 0.8rem; font-size:1.2rem;">➕</button>
+                <button class="rpg-button btn-secondary" id="zoom-out" style="padding:0.2rem 0.8rem; font-size:1.2rem;">➖</button>
+                <button class="rpg-button btn-secondary" id="zoom-reset" style="padding:0.2rem 0.8rem; font-size:0.9rem;">⟲ Restablecer</button>
+            </div>
+            <div class="graph-container" id="graph-container" style="touch-action: pinch-zoom; overflow: auto; max-width: 100%; width:100%; position:relative; border:2px solid var(--card-border); border-radius:16px; background:var(--card-bg);">
+                <canvas id="graph-canvas" width="1200" height="1200" style="width:100%; height:auto; display:block; image-rendering:auto;"></canvas>
             </div>
             ${optionsHtml}
             ${feedbackHtml}
@@ -650,6 +634,65 @@ function afterRender() {
 
     if (screen === 'GRAFICO') {
         dibujarGrafico();
+
+        // Controles de zoom
+        document.getElementById('zoom-in')?.addEventListener('click', () => {
+            graphZoom = Math.min(graphZoom * 1.4, 10);
+            dibujarGrafico();
+        });
+        document.getElementById('zoom-out')?.addEventListener('click', () => {
+            graphZoom = Math.max(graphZoom / 1.4, 0.2);
+            dibujarGrafico();
+        });
+        document.getElementById('zoom-reset')?.addEventListener('click', () => {
+            graphZoom = 1;
+            graphPanX = 0;
+            graphPanY = 0;
+            dibujarGrafico();
+        });
+
+        // Zoom con rueda del mouse
+        const container = document.getElementById('graph-container');
+        if (container) {
+            container.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    graphZoom = Math.min(graphZoom * 1.2, 10);
+                } else {
+                    graphZoom = Math.max(graphZoom / 1.2, 0.2);
+                }
+                dibujarGrafico();
+            }, { passive: false });
+        }
+
+        // Arrastre (pan) con el mouse
+        let isDragging = false;
+        let startX, startY;
+        const canvas = document.getElementById('graph-canvas');
+        if (canvas) {
+            canvas.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                canvas.style.cursor = 'grabbing';
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const dx = (e.clientX - startX) * 0.02 / graphZoom;
+                    const dy = (e.clientY - startY) * 0.02 / graphZoom;
+                    graphPanX += dx;
+                    graphPanY -= dy;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    dibujarGrafico();
+                }
+            });
+            window.addEventListener('mouseup', () => {
+                isDragging = false;
+                if (canvas) canvas.style.cursor = 'grab';
+            });
+        }
+
         if (!gameState.grafico.completada) {
             const options = document.querySelectorAll('#graph-options button');
             options.forEach(btn => {
@@ -709,7 +752,6 @@ function manejarBomba(num) {
     if (gameState.bombas[num].completada) return;
     if (gameState.gameOver) return;
 
-    // Verificar si ya se alcanzó el máximo de errores globales
     if (gameState.erroresTotales >= MAX_INTENTOS_GLOBAL) {
         gameState.gameOver = true;
         playSound('explosion');
@@ -747,7 +789,6 @@ function manejarBomba(num) {
         playSound('success');
         renderizar();
     } else {
-        // Incrementar error global
         gameState.erroresTotales++;
         let mensaje = '❌ Revisa tus cálculos.';
         if (sonIguales(xVal, ejercicio.solY) && sonIguales(yVal, ejercicio.solX)) {
@@ -764,7 +805,6 @@ function manejarBomba(num) {
         gameState.bombas[num].feedbackType = 'error';
         playSound('error');
 
-        // Verificar si alcanzó el máximo de errores globales
         if (gameState.erroresTotales >= MAX_INTENTOS_GLOBAL) {
             gameState.gameOver = true;
             playSound('explosion');
@@ -792,7 +832,6 @@ function manejarPista(num) {
         renderizar();
         return;
     }
-    // Mostrar la pista SOLO en el feedback de la bomba (sin duplicar)
     const pista = ejercicio.pistas[pistasUsadas];
     gameState.bombas[num].pistasUsadas++;
     gameState.pistasDisponibles--;
@@ -817,7 +856,6 @@ function manejarGrafico(btn) {
     } else {
         gameState.grafico.intentos++;
         gameState.erroresTotales++;
-        // Verificar si alcanzó el máximo de errores globales
         if (gameState.erroresTotales >= MAX_INTENTOS_GLOBAL) {
             gameState.gameOver = true;
             playSound('explosion');
@@ -941,14 +979,14 @@ async function guardarProgresoFirebase() {
     }
 }
 
-// ========== DIBUJAR GRÁFICO (sin punto, con zoom) ==========
+// ========== DIBUJAR GRÁFICO CON ZOOM Y PAN ==========
 function dibujarGrafico() {
     const canvas = document.getElementById('graph-canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const w = canvas.width;  // 600
-    const h = canvas.height; // 600
-    const padding = 50;
+    const w = canvas.width;
+    const h = canvas.height;
+    const padding = 70;
 
     ctx.clearRect(0, 0, w, h);
 
@@ -981,15 +1019,23 @@ function dibujarGrafico() {
     const rect1 = parseRecta(eq1);
     const rect2 = parseRecta(eq2);
 
-    // Rango dinámico para que las rectas se vean bien
-    let xMin = -8, xMax = 8;
-    const yMin = Math.min(rect1.m * xMin + rect1.b, rect2.m * xMin + rect2.b, -5);
-    const yMax = Math.max(rect1.m * xMax + rect1.b, rect2.m * xMax + rect2.b, 5);
-    const rangoX = xMax - xMin;
-    const rangoY = yMax - yMin;
-    const escala = Math.min((w - 2 * padding) / rangoX, (h - 2 * padding) / rangoY) * 0.9;
-    const midX = (xMin + xMax) / 2;
-    const midY = (yMin + yMax) / 2;
+    let xMin = -10, xMax = 10;
+    const yMin = Math.min(rect1.m * xMin + rect1.b, rect2.m * xMin + rect2.b, -6);
+    const yMax = Math.max(rect1.m * xMax + rect1.b, rect2.m * xMax + rect2.b, 6);
+
+    const zoomFactor = 1 / graphZoom;
+    const centerX = (xMin + xMax) / 2 + graphPanX;
+    const centerY = (yMin + yMax) / 2 + graphPanY;
+    const rangeX = (xMax - xMin) * zoomFactor;
+    const rangeY = (yMax - yMin) * zoomFactor;
+    const xMinZ = centerX - rangeX / 2;
+    const xMaxZ = centerX + rangeX / 2;
+    const yMinZ = centerY - rangeY / 2;
+    const yMaxZ = centerY + rangeY / 2;
+
+    const escala = Math.min((w - 2 * padding) / (xMaxZ - xMinZ), (h - 2 * padding) / (yMaxZ - yMinZ)) * 0.9;
+    const midX = (xMinZ + xMaxZ) / 2;
+    const midY = (yMinZ + yMaxZ) / 2;
 
     function toCanvas(px, py) {
         const xCanvas = padding + (w - 2 * padding) / 2 + (px - midX) * escala;
@@ -997,9 +1043,9 @@ function dibujarGrafico() {
         return { x: xCanvas, y: yCanvas };
     }
 
-    // Dibujar ejes
+    // Ejes
     ctx.strokeStyle = '#888';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
     const origen = toCanvas(0, 0);
     ctx.beginPath();
     ctx.moveTo(padding, origen.y);
@@ -1010,31 +1056,36 @@ function dibujarGrafico() {
 
     // Cuadrícula
     ctx.strokeStyle = '#ddd';
-    ctx.lineWidth = 0.5;
-    for (let i = -10; i <= 10; i++) {
+    ctx.lineWidth = 1;
+    const step = 1;
+    for (let i = -20; i <= 20; i += step) {
         if (i === 0) continue;
         const px = toCanvas(i, 0).x;
-        ctx.beginPath();
-        ctx.moveTo(px, padding);
-        ctx.lineTo(px, h - padding);
-        ctx.stroke();
+        if (px > padding && px < w - padding) {
+            ctx.beginPath();
+            ctx.moveTo(px, padding);
+            ctx.lineTo(px, h - padding);
+            ctx.stroke();
+        }
         const py = toCanvas(0, i).y;
-        ctx.beginPath();
-        ctx.moveTo(padding, py);
-        ctx.lineTo(w - padding, py);
-        ctx.stroke();
+        if (py > padding && py < h - padding) {
+            ctx.beginPath();
+            ctx.moveTo(padding, py);
+            ctx.lineTo(w - padding, py);
+            ctx.stroke();
+        }
     }
 
-    // Dibujar rectas
+    // Rectas
     function dibujarRecta(m, b, color) {
-        const x1 = xMin;
-        const x2 = xMax;
+        const x1 = xMinZ;
+        const x2 = xMaxZ;
         const y1 = m * x1 + b;
         const y2 = m * x2 + b;
         const p1 = toCanvas(x1, y1);
         const p2 = toCanvas(x2, y2);
         ctx.strokeStyle = color;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
         ctx.lineTo(p2.x, p2.y);
@@ -1046,11 +1097,25 @@ function dibujarGrafico() {
 
     // NO dibujar el punto de intersección
 
-    // Etiquetas de ejes
+    // Etiquetas y números
     ctx.fillStyle = '#333';
+    ctx.font = '18px sans-serif';
+    ctx.fillText('x', w - padding + 15, origen.y + 8);
+    ctx.fillText('y', origen.x + 8, padding - 15);
+
+    ctx.fillStyle = '#666';
     ctx.font = '14px sans-serif';
-    ctx.fillText('x', w - padding + 10, origen.y + 6);
-    ctx.fillText('y', origen.x + 6, padding - 10);
+    for (let i = -10; i <= 10; i++) {
+        if (i === 0) continue;
+        const px = toCanvas(i, 0).x;
+        if (px > padding && px < w - padding) {
+            ctx.fillText(i, px - 8, origen.y + 25);
+        }
+        const py = toCanvas(0, i).y;
+        if (py > padding && py < h - padding) {
+            ctx.fillText(i, origen.x + 10, py + 5);
+        }
+    }
 }
 
 // ========== SONIDO ==========
@@ -1110,10 +1175,13 @@ function iniciarJuego() {
         console.error('No se encontró #game-screen');
         return;
     }
+
+    // CAMBIO: Forzar el texto de la región
     const regionEl = document.getElementById('player-region');
     if (regionEl) {
         regionEl.textContent = '🚀 Misión: Sistemas';
     }
+
     if (!window.jugador) {
         document.addEventListener('jugador-cargado', () => {
             cargarEstadoDesdeFirebase();
