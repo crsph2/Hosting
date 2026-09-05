@@ -2,18 +2,17 @@
 // sistemas.js – "Operación: Sistema" (VERSIÓN FINAL COMPLETA)
 // ============================================================
 
-// ---- CONSTANTES ----
 const XP_POR_NIVEL = 100;
 const MONEDAS_REWARDS = 200;
 const MAX_PISTAS = 5;
 const MAX_INTENTOS_GLOBAL = 5; // 5 fallos en total
 
-// ---- VARIABLES GLOBALES PARA EL GRÁFICO ----
+// Variables globales para el gráfico (zoom y pan)
 let graphZoom = 1;
 let graphPanX = 0;
 let graphPanY = 0;
 
-// ========== GENERADORES DE SISTEMAS (coeficientes 1 ocultos) ==========
+// ========== GENERADORES DE SISTEMAS (con coeficientes 1 ocultos) ==========
 
 function generarSistemaSustitucion() {
     let x, y, m, b, a, c;
@@ -268,6 +267,7 @@ function reiniciarEstado() {
         estrategia: { completada: false, intentos: 0, metodoElegido: null },
         puntuacion: 0,
         erroresTotales: 0,
+        aciertosTotales: 0,
         pistasDisponibles: MAX_PISTAS,
         pistasTotalesUsadas: 0,
         inicioTiempo: null,
@@ -292,13 +292,20 @@ function reiniciarEstado() {
     gameState.ejercicios.grafico.distractors = mezclarArray([...grafico.distractors]);
     gameState.ejercicios.estrategia = generarSistemaEstrategia();
 
-    // Reiniciar zoom del gráfico
+    // Reiniciar zoom y pan del gráfico
     graphZoom = 1;
     graphPanX = 0;
     graphPanY = 0;
+    actualizarContadorAciertos();
 }
 
-// ========== RENDERIZADO ==========
+function actualizarContadorAciertos() {
+    const el = document.getElementById('aciertos-contador');
+    if (el) el.textContent = gameState.aciertosTotales || 0;
+}
+
+// ========== RENDERIZADO DE PANTALLAS ==========
+
 function renderStart() {
     return `
         <div class="start-screen">
@@ -360,9 +367,12 @@ function renderBomba(num) {
                 <span class="bomb-method">${methodLabel}</span>
                 <span style="font-size:0.8rem; background:#333; color:#fff; padding:0.2rem 0.8rem; border-radius:10px;">Pistas restantes: ${gameState.pistasDisponibles}</span>
             </div>
-            <div style="text-align:center; margin: 5px 0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px; margin:5px 0;">
                 <span style="background: #ff6b6b; color: #fff; padding: 0.2rem 0.8rem; border-radius: 20px; font-weight: bold;">
-                    ⚠️ Intentos fallidos restantes: ${fallosRestantes}
+                    ⚠️ Fallos restantes: ${fallosRestantes}
+                </span>
+                <span style="background: #2e7d32; color: #fff; padding: 0.2rem 0.8rem; border-radius: 20px; font-weight: bold;">
+                    ✅ Aciertos: ${gameState.aciertosTotales}
                 </span>
             </div>
             <div class="bomb-system">
@@ -491,6 +501,7 @@ function renderFinish() {
             <div class="score">🏆 Puntaje: ${puntos}</div>
             <div class="stats">
                 <div class="stats-item">💣 Bombas desactivadas: <span>3/3</span></div>
+                <div class="stats-item">✅ Aciertos totales: <span>${gameState.aciertosTotales}</span></div>
                 <div class="stats-item">❌ Errores totales: <span>${errores}</span></div>
                 <div class="stats-item">💡 Pistas utilizadas: <span>${pistas}</span></div>
                 <div class="stats-item">💡 Pistas restantes: <span>${gameState.pistasDisponibles}</span></div>
@@ -524,6 +535,7 @@ function renderGameOver() {
 }
 
 // ========== RENDERIZAR Y POST-RENDER ==========
+
 function renderizar() {
     if (!elGameScreen) return;
     const screen = gameState.currentScreen;
@@ -565,6 +577,17 @@ function renderizar() {
 function afterRender() {
     const screen = gameState.currentScreen;
 
+    // Botón de reinicio global (siempre visible)
+    document.getElementById('btn-reset-game')?.addEventListener('click', () => {
+        if (confirm('¿Seguro que quieres reiniciar la misión? Se perderá el progreso actual.')) {
+            reiniciarEstado();
+            gameState.currentScreen = 'START';
+            renderizar();
+            actualizarContadorAciertos();
+        }
+    });
+
+    // GAME OVER
     if (screen === 'GAME_OVER') {
         document.getElementById('btn-retry-gameover')?.addEventListener('click', () => {
             reiniciarEstado();
@@ -577,6 +600,7 @@ function afterRender() {
         return;
     }
 
+    // START
     if (screen === 'START') {
         const btnStart = document.getElementById('btn-start-mission');
         if (btnStart) btnStart.addEventListener('click', () => {
@@ -599,6 +623,7 @@ function afterRender() {
         }
     }
 
+    // INTRO
     if (screen === 'INTRO') {
         const btnStart = document.getElementById('btn-start-mission');
         if (btnStart) {
@@ -610,6 +635,7 @@ function afterRender() {
         }
     }
 
+    // BOMBAS
     for (let i = 1; i <= 3; i++) {
         if (screen === `BOMBA${i}`) {
             const btnDisarm = document.getElementById(`btn-disarm-${i}`);
@@ -632,10 +658,11 @@ function afterRender() {
         }
     }
 
+    // GRÁFICO
     if (screen === 'GRAFICO') {
         dibujarGrafico();
 
-        // Controles de zoom
+        // Botones de zoom
         document.getElementById('zoom-in')?.addEventListener('click', () => {
             graphZoom = Math.min(graphZoom * 1.4, 10);
             dibujarGrafico();
@@ -665,7 +692,7 @@ function afterRender() {
             }, { passive: false });
         }
 
-        // Arrastre (pan) con el mouse
+        // Arrastre (pan) con mouse
         let isDragging = false;
         let startX, startY;
         const canvas = document.getElementById('graph-canvas');
@@ -691,8 +718,58 @@ function afterRender() {
                 isDragging = false;
                 if (canvas) canvas.style.cursor = 'grab';
             });
+
+            // ===== SOPORTE TÁCTIL (ZOOM Y PAN CON DEDOS) =====
+            let lastTouchDist = 0;
+            let lastTouchX = 0;
+            let lastTouchY = 0;
+            let isTouchDragging = false;
+
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (e.touches.length === 1) {
+                    isTouchDragging = true;
+                    lastTouchX = e.touches[0].clientX;
+                    lastTouchY = e.touches[0].clientY;
+                } else if (e.touches.length === 2) {
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    lastTouchDist = Math.sqrt(dx*dx + dy*dy);
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (e.touches.length === 1 && isTouchDragging) {
+                    // Arrastre con un dedo
+                    const dx = (e.touches[0].clientX - lastTouchX) * 0.02 / graphZoom;
+                    const dy = (e.touches[0].clientY - lastTouchY) * 0.02 / graphZoom;
+                    graphPanX += dx;
+                    graphPanY -= dy;
+                    lastTouchX = e.touches[0].clientX;
+                    lastTouchY = e.touches[0].clientY;
+                    dibujarGrafico();
+                } else if (e.touches.length === 2) {
+                    // Zoom con dos dedos (pinch)
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if (lastTouchDist > 0) {
+                        const scale = dist / lastTouchDist;
+                        graphZoom = Math.min(Math.max(graphZoom * scale, 0.2), 10);
+                        dibujarGrafico();
+                    }
+                    lastTouchDist = dist;
+                }
+            }, { passive: false });
+
+            canvas.addEventListener('touchend', (e) => {
+                isTouchDragging = false;
+                lastTouchDist = 0;
+            });
         }
 
+        // Opciones del gráfico
         if (!gameState.grafico.completada) {
             const options = document.querySelectorAll('#graph-options button');
             options.forEach(btn => {
@@ -709,6 +786,7 @@ function afterRender() {
         }
     }
 
+    // ESTRATEGIA
     if (screen === 'ESTRATEGIA') {
         if (gameState.faseEstrategia === 'metodo' && !gameState.estrategia.completada) {
             const opts = document.querySelectorAll('#strategy-options button');
@@ -730,6 +808,7 @@ function afterRender() {
         }
     }
 
+    // FINISH
     if (screen === 'FINISH') {
         document.getElementById('btn-replay')?.addEventListener('click', () => {
             reiniciarEstado();
@@ -747,11 +826,11 @@ function afterRender() {
     }
 }
 
-// ========== MANEJO DE BOMBAS (con errores globales) ==========
+// ========== MANEJADORES DE ACCIONES ==========
+
 function manejarBomba(num) {
     if (gameState.bombas[num].completada) return;
     if (gameState.gameOver) return;
-
     if (gameState.erroresTotales >= MAX_INTENTOS_GLOBAL) {
         gameState.gameOver = true;
         playSound('explosion');
@@ -786,6 +865,8 @@ function manejarBomba(num) {
         else if (pistasUsadas >= 2) puntos = 50;
         gameState.puntuacion += puntos;
         gameState.bombas[num].feedbackType = 'success';
+        gameState.aciertosTotales++;
+        actualizarContadorAciertos();
         playSound('success');
         renderizar();
     } else {
@@ -851,6 +932,8 @@ function manejarGrafico(btn) {
         gameState.grafico.feedback = '✅ ¡Correcto! La solución del sistema corresponde al punto de intersección.';
         gameState.grafico.feedbackType = 'success';
         gameState.puntuacion += 100;
+        gameState.aciertosTotales++;
+        actualizarContadorAciertos();
         playSound('success');
         renderizar();
     } else {
@@ -909,6 +992,8 @@ function manejarEstrategiaResolucion() {
         gameState.puntuacion += 100;
         feedback.textContent = '✅ ¡Correcto! Has completado la misión.';
         feedback.className = 'bomb-feedback success';
+        gameState.aciertosTotales++;
+        actualizarContadorAciertos();
         playSound('success');
         renderizar();
     } else {
@@ -980,12 +1065,13 @@ async function guardarProgresoFirebase() {
 }
 
 // ========== DIBUJAR GRÁFICO CON ZOOM Y PAN ==========
+
 function dibujarGrafico() {
     const canvas = document.getElementById('graph-canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const w = canvas.width;
-    const h = canvas.height;
+    const w = canvas.width;   // 1200
+    const h = canvas.height;  // 1200
     const padding = 70;
 
     ctx.clearRect(0, 0, w, h);
@@ -1019,10 +1105,12 @@ function dibujarGrafico() {
     const rect1 = parseRecta(eq1);
     const rect2 = parseRecta(eq2);
 
+    // Rango base sin zoom
     let xMin = -10, xMax = 10;
     const yMin = Math.min(rect1.m * xMin + rect1.b, rect2.m * xMin + rect2.b, -6);
     const yMax = Math.max(rect1.m * xMax + rect1.b, rect2.m * xMax + rect2.b, 6);
 
+    // Aplicar zoom y pan
     const zoomFactor = 1 / graphZoom;
     const centerX = (xMin + xMax) / 2 + graphPanX;
     const centerY = (yMin + yMax) / 2 + graphPanY;
@@ -1095,9 +1183,9 @@ function dibujarGrafico() {
     dibujarRecta(rect1.m, rect1.b, '#e74c3c');
     dibujarRecta(rect2.m, rect2.b, '#3498db');
 
-    // NO dibujar el punto de intersección
+    // NO se dibuja el punto de intersección
 
-    // Etiquetas y números
+    // Etiquetas de ejes y números
     ctx.fillStyle = '#333';
     ctx.font = '18px sans-serif';
     ctx.fillText('x', w - padding + 15, origen.y + 8);
@@ -1119,6 +1207,7 @@ function dibujarGrafico() {
 }
 
 // ========== SONIDO ==========
+
 function playSound(type) {
     if (localStorage.getItem('soundOn') === 'false') return;
     try {
@@ -1165,6 +1254,7 @@ function playSound(type) {
 }
 
 // ========== INICIALIZACIÓN ==========
+
 function cargarEstadoDesdeFirebase() {
     reiniciarEstado();
 }
@@ -1176,7 +1266,7 @@ function iniciarJuego() {
         return;
     }
 
-    // CAMBIO: Forzar el texto de la región
+    // Forzar el texto de la región
     const regionEl = document.getElementById('player-region');
     if (regionEl) {
         regionEl.textContent = '🚀 Misión: Sistemas';
