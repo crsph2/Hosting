@@ -24,10 +24,18 @@
             <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin:4px 0 8px;">
                 <button id="btn-edit-name" class="rpg-button btn-gold" style="padding:4px 12px; font-size:0.7rem;">✏️ Nombre</button>
                 <button id="btn-logout" class="rpg-button btn-danger" style="padding:4px 12px; font-size:0.7rem;">🚪 Salir</button>
+                <!-- NUEVO: Botón de reinicio -->
+                <button id="btn-reset-game" class="rpg-button btn-secondary" style="padding:4px 12px; font-size:0.7rem;">🔄 Reiniciar</button>
             </div>
-            <div class="xp-bar" style="height:18px;">
-                <div id="xp-bar-fill" class="xp-bar-fill" style="width:0%;"></div>
-                <span id="xp-text" class="xp-text" style="font-size:0.7rem;">0 / 100 XP</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+                <div class="xp-bar" style="height:18px; flex:1; min-width:100px;">
+                    <div id="xp-bar-fill" class="xp-bar-fill" style="width:0%;"></div>
+                    <span id="xp-text" class="xp-text" style="font-size:0.7rem;">0 / 100 XP</span>
+                </div>
+                <!-- NUEVO: Contador de aciertos -->
+                <span style="background: #2e7d32; color: #fff; padding: 0.1rem 0.8rem; border-radius: 20px; font-weight: bold; font-size:0.8rem;">
+                    ✅ <span id="aciertos-contador">0</span>
+                </span>
             </div>
             <div class="region-info">
                 <span id="player-region">Misión: Sistemas</span>
